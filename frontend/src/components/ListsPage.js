@@ -69,7 +69,7 @@ const ListsPage = ({ onToast }) => {
 
   return (
     <div className="page-container">
-      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+      <div className="page-header lists-page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
           <h1 className="page-title">📂 Problem Lists</h1>
           <p className="page-subtitle">Organize and curate your favorite problems</p>
