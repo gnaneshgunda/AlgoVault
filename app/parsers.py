@@ -68,3 +68,38 @@ class ParserFactory:
             return CSESParser()
         else:
             return GenericParser()
+
+
+def auto_detect_platform(url: str) -> str:
+    """
+    Auto-detect the platform from a URL's domain.
+    Returns the platform name string, or 'Other' for unrecognized domains.
+    """
+    try:
+        parsed = urlparse(url)
+        domain = parsed.netloc.lower()
+        if domain.startswith("www."):
+            domain = domain[4:]
+
+        if "codeforces.com" in domain:
+            return "Codeforces"
+        elif "leetcode.com" in domain:
+            return "LeetCode"
+        elif "atcoder.jp" in domain:
+            return "AtCoder"
+        elif "cses.fi" in domain:
+            return "CSES"
+        elif "hackerrank.com" in domain:
+            return "HackerRank"
+        elif "geeksforgeeks.org" in domain:
+            return "GeeksForGeeks"
+        elif "spoj.com" in domain:
+            return "SPOJ"
+        elif "codechef.com" in domain:
+            return "CodeChef"
+        elif "hackerearth.com" in domain:
+            return "HackerEarth"
+        else:
+            return "Other"
+    except Exception:
+        return "Other"

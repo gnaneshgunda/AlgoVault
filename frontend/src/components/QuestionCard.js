@@ -1,54 +1,128 @@
 import React, { useState } from 'react';
-import { ThumbsUp, Bookmark } from 'lucide-react';
+import { ThumbsUp, Bookmark, ExternalLink, Eye, TrendingUp, Award } from 'lucide-react';
 import { createInteraction } from '../api';
 
-const QuestionCard = ({ question, userId }) => {
+const PLATFORM_CLASS = {
+  'Codeforces': 'codeforces',
+  'LeetCode': 'leetcode',
+  'AtCoder': 'atcoder',
+  'CSES': 'cses',
+};
+
+const QuestionCard = ({ question, isLoggedIn, onToast, style }) => {
   const [upvoted, setUpvoted] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [animateUpvote, setAnimateUpvote] = useState(false);
+  const [animateSave, setAnimateSave] = useState(false);
 
   const handleUpvote = async () => {
-    if (upvoted) return;
+    if (upvoted || !isLoggedIn) {
+      if (!isLoggedIn) onToast?.('Please login to upvote', 'error');
+      return;
+    }
     try {
       await createInteraction({
-        user_id: userId,
         question_id: question.id,
         interaction_type: 'Upvote'
       });
       setUpvoted(true);
+      setAnimateUpvote(true);
+      setTimeout(() => setAnimateUpvote(false), 400);
+      onToast?.('Upvoted!', 'success');
     } catch (e) {
-      console.error(e);
-      alert("Failed to upvote or already upvoted");
+      const msg = e.response?.data?.detail || 'Failed to upvote';
+      if (msg === 'Interaction already exists') {
+        setUpvoted(true);
+      }
+      onToast?.(msg, 'error');
     }
   };
 
   const handleSave = async () => {
-    if (saved) return;
+    if (saved || !isLoggedIn) {
+      if (!isLoggedIn) onToast?.('Please login to save', 'error');
+      return;
+    }
     try {
       await createInteraction({
-        user_id: userId,
         question_id: question.id,
         interaction_type: 'Save'
       });
       setSaved(true);
-      alert("Question saved!");
+      setAnimateSave(true);
+      setTimeout(() => setAnimateSave(false), 400);
+      onToast?.('Saved!', 'success');
     } catch (e) {
-      console.error(e);
-      alert("Failed to save or already saved");
+      const msg = e.response?.data?.detail || 'Failed to save';
+      if (msg === 'Interaction already exists') {
+        setSaved(true);
+      }
+      onToast?.(msg, 'error');
     }
   };
 
-  return (
-    <div style={{ border: '1px solid #ccc', padding: '16px', margin: '16px 0', borderRadius: '8px' }}>
-      <h3>{question.title}</h3>
-      <p style={{ color: 'gray' }}>{question.platform} | Views: {question.total_views}</p>
-      <a href={question.original_url} target="_blank" rel="noopener noreferrer">View Problem</a>
+  const platformClass = PLATFORM_CLASS[question.platform] || 'other';
 
-      <div style={{ display: 'flex', gap: '16px', marginTop: '16px' }}>
-        <button onClick={handleUpvote} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', background: upvoted ? '#e0e0e0' : 'transparent', padding: '8px' }}>
-          <ThumbsUp size={16} color={upvoted ? "blue" : "black"} /> Upvote
+  const timeAgo = (dateStr) => {
+    const now = new Date();
+    const date = new Date(dateStr);
+    const seconds = Math.floor((now - date) / 1000);
+    if (seconds < 60) return 'just now';
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    if (days < 30) return `${days}d ago`;
+    return date.toLocaleDateString();
+  };
+
+  return (
+    <div className="question-card" style={style}>
+      <div className="question-card-header">
+        <div style={{ flex: 1 }}>
+          <div className="question-title">{question.title}</div>
+          <div className="question-meta">
+            <span className={`platform-badge ${platformClass}`}>
+              {question.platform}
+            </span>
+            {question.submitter_username && (
+              <span className="meta-item">
+                by {question.submitter_username}
+              </span>
+            )}
+            <span className="meta-item">
+              <Eye size={12} /> {question.total_views}
+            </span>
+            <span className="meta-item">
+              <TrendingUp size={12} /> {question.trending_score?.toFixed(2)}
+            </span>
+            <span className="meta-item">
+              <Award size={12} /> {question.wilson_score?.toFixed(3)}
+            </span>
+            <span className="meta-item">
+              {timeAgo(question.created_at)}
+            </span>
+          </div>
+        </div>
+        <a href={question.original_url} target="_blank" rel="noopener noreferrer"
+          className="btn btn-ghost btn-sm" style={{ flexShrink: 0 }}>
+          <ExternalLink size={14} /> Solve
+        </a>
+      </div>
+
+      <div className="question-actions">
+        <button
+          className={`action-btn ${upvoted ? 'active-upvote' : ''} ${animateUpvote ? 'pulse-once' : ''}`}
+          onClick={handleUpvote}
+        >
+          <ThumbsUp size={14} /> {upvoted ? 'Upvoted' : 'Upvote'}
         </button>
-        <button onClick={handleSave} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', background: saved ? '#e0e0e0' : 'transparent', padding: '8px' }}>
-          <Bookmark size={16} color={saved ? "green" : "black"} /> Save
+        <button
+          className={`action-btn ${saved ? 'active-save' : ''} ${animateSave ? 'pulse-once' : ''}`}
+          onClick={handleSave}
+        >
+          <Bookmark size={14} /> {saved ? 'Saved' : 'Save'}
         </button>
       </div>
     </div>

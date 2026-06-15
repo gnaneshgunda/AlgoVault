@@ -1,57 +1,142 @@
-import React, { useState } from 'react';
-import FeedContainer from './components/FeedContainer';
-import { createQuestion } from './api';
+import React, { useState, useEffect, useCallback } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import Navbar from './components/Navbar';
+import LoginPage from './components/LoginPage';
+import RegisterPage from './components/RegisterPage';
+import FeedPage from './components/FeedContainer';
+import SubmitPage from './components/SubmitPage';
+import ListsPage from './components/ListsPage';
+import ListView from './components/ListView';
+import ProfilePage from './components/ProfilePage';
+import { getMe } from './api';
+import './index.css';
+
+// Toast notification system
+const Toast = ({ message, type, onClose }) => {
+  useEffect(() => {
+    const timer = setTimeout(onClose, 3000);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  return <div className={`toast toast-${type}`}>{message}</div>;
+};
+
+// Protected Route wrapper
+const ProtectedRoute = ({ user, children }) => {
+  if (!user) return <Navigate to="/login" replace />;
+  return children;
+};
 
 function App() {
-  const DEMO_USER_ID = "00000000-0000-0000-0000-000000000000";
-  const [urlInput, setUrlInput] = useState('');
-  const [titleInput, setTitleInput] = useState('');
-  const [platformInput, setPlatformInput] = useState('Codeforces');
+  const [user, setUser] = useState(null);
+  const [toasts, setToasts] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const handleAddQuestion = async (e) => {
-    e.preventDefault();
-    try {
-      await createQuestion({
-        submitter_id: DEMO_USER_ID,
-        original_url: urlInput,
-        title: titleInput,
-        platform: platformInput
-      });
-      alert('Question added successfully!');
-      setUrlInput('');
-      setTitleInput('');
-    } catch (e) {
-      console.error(e);
-      alert('Failed to add question');
+  const addToast = useCallback((message, type = 'info') => {
+    const id = Date.now();
+    setToasts(prev => [...prev, { id, message, type }]);
+  }, []);
+
+  const removeToast = useCallback((id) => {
+    setToasts(prev => prev.filter(t => t.id !== id));
+  }, []);
+
+  // Restore user session on mount
+  useEffect(() => {
+    const token = localStorage.getItem('algovault_token');
+    if (token) {
+      getMe()
+        .then(data => {
+          setUser(data);
+        })
+        .catch(() => {
+          localStorage.removeItem('algovault_token');
+          localStorage.removeItem('algovault_user');
+        })
+        .finally(() => setLoading(false));
+    } else {
+      setLoading(false);
     }
+  }, []);
+
+  const handleLogin = (data) => {
+    // Fetch full user profile after login
+    getMe().then(profile => {
+      setUser(profile);
+    }).catch(() => {
+      // Fallback to basic info
+      setUser({ id: data.user_id, username: data.username });
+    });
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem('algovault_token');
+    localStorage.removeItem('algovault_user');
+    setUser(null);
+    addToast('Logged out successfully', 'info');
+  };
+
+  if (loading) {
+    return (
+      <div style={{
+        minHeight: '100vh', display: 'flex', alignItems: 'center',
+        justifyContent: 'center', background: 'var(--bg-primary)'
+      }}>
+        <div className="spinner" style={{ width: 48, height: 48 }} />
+      </div>
+    );
+  }
+
   return (
-    <div style={{ fontFamily: 'sans-serif' }}>
-      <header style={{ background: '#282c34', padding: '20px', color: 'white', textAlign: 'center' }}>
-        <h1>CP Curation Platform</h1>
-      </header>
-      <main style={{ padding: '20px', maxWidth: '800px', margin: '0 auto' }}>
-        <section style={{ marginBottom: '40px', padding: '20px', background: '#f5f5f5', borderRadius: '8px' }}>
-          <h2>Submit a New Problem</h2>
-          <form onSubmit={handleAddQuestion} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <input type="url" placeholder="Problem URL" value={urlInput} onChange={e => setUrlInput(e.target.value)} required />
-            <input type="text" placeholder="Problem Title" value={titleInput} onChange={e => setTitleInput(e.target.value)} required />
-            <select value={platformInput} onChange={e => setPlatformInput(e.target.value)}>
-              <option value="Codeforces">Codeforces</option>
-              <option value="LeetCode">LeetCode</option>
-              <option value="CSES">CSES</option>
-              <option value="AtCoder">AtCoder</option>
-            </select>
-            <button type="submit">Submit Problem</button>
-          </form>
-        </section>
-        <section>
-          <h2>Global Feed</h2>
-          <FeedContainer userId={DEMO_USER_ID} />
-        </section>
-      </main>
-    </div>
+    <Router>
+      <div style={{ minHeight: '100vh', background: 'var(--bg-primary)' }}>
+        <Navbar user={user} onLogout={handleLogout} />
+
+        <Routes>
+          {/* Public routes */}
+          <Route path="/" element={<FeedPage isLoggedIn={!!user} onToast={addToast} />} />
+          <Route path="/login" element={
+            user ? <Navigate to="/" replace /> : <LoginPage onLogin={handleLogin} />
+          } />
+          <Route path="/register" element={
+            user ? <Navigate to="/" replace /> : <RegisterPage onLogin={handleLogin} />
+          } />
+
+          {/* Protected routes */}
+          <Route path="/submit" element={
+            <ProtectedRoute user={user}>
+              <SubmitPage onToast={addToast} />
+            </ProtectedRoute>
+          } />
+          <Route path="/lists" element={
+            <ProtectedRoute user={user}>
+              <ListsPage onToast={addToast} />
+            </ProtectedRoute>
+          } />
+          <Route path="/lists/:listId" element={
+            <ProtectedRoute user={user}>
+              <ListView currentUserId={user?.id} onToast={addToast} />
+            </ProtectedRoute>
+          } />
+          <Route path="/profile" element={
+            <ProtectedRoute user={user}>
+              <ProfilePage onToast={addToast} />
+            </ProtectedRoute>
+          } />
+
+          {/* Fallback */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+
+        {/* Toast notifications */}
+        <div className="toast-container">
+          {toasts.map(t => (
+            <Toast key={t.id} message={t.message} type={t.type} onClose={() => removeToast(t.id)} />
+          ))}
+        </div>
+      </div>
+    </Router>
   );
 }
+
 export default App;

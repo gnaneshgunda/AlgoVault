@@ -20,6 +20,8 @@ class User(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     username = Column(String, unique=True, index=True, nullable=False)
+    email = Column(String, unique=True, index=True, nullable=False)
+    hashed_password = Column(String, nullable=False)
 
     # External Stats
     codeforces_rating = Column(Integer, default=0)
@@ -28,11 +30,12 @@ class User(Base):
     cses_solved = Column(Integer, default=0)
 
     # Gamification
-    credibility_tier = Column(Integer, default=1) # Deprecated, keeping for backwards compatibility until full migration
     solving_score = Column(Integer, default=0)
     curation_score = Column(Integer, default=0)
     total_rating = Column(Integer, default=0)
     rank_tier = Column(String, default='Scripter')
+
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     lists = relationship("List", back_populates="user")
     interactions = relationship("Interaction", back_populates="user")
@@ -67,6 +70,7 @@ class List(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     title = Column(String, nullable=False)
+    description = Column(String, default="")
     is_public = Column(Boolean, default=True)
     forked_from_list_id = Column(UUID(as_uuid=True), ForeignKey("lists.id"), nullable=True)
 
@@ -82,6 +86,7 @@ class ListQuestion(Base):
     list_id = Column(UUID(as_uuid=True), ForeignKey("lists.id"), primary_key=True)
     question_id = Column(UUID(as_uuid=True), ForeignKey("questions.id"), primary_key=True)
     status = Column(Enum(ListQuestionStatus), default=ListQuestionStatus.TODO)
+    added_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     list = relationship("List", back_populates="list_questions")
     question = relationship("Question", back_populates="list_questions")

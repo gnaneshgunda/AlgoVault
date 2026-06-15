@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from app.db.database import engine, Base
-from app.api import questions, users, lists, interactions, feeds
+from app.api import auth, questions, users, lists, interactions, feeds
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -11,7 +11,7 @@ async def lifespan(app: FastAPI):
         await conn.run_sync(Base.metadata.create_all)
     yield
 
-app = FastAPI(title="CP Curation API", lifespan=lifespan)
+app = FastAPI(title="AlgoVault API", lifespan=lifespan)
 
 # Allow React app to talk to backend
 app.add_middleware(
@@ -22,6 +22,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(auth.router)
 app.include_router(questions.router)
 app.include_router(users.router)
 app.include_router(lists.router)
@@ -30,4 +31,4 @@ app.include_router(feeds.router)
 
 @app.get("/")
 async def root():
-    return {"message": "Welcome to the Competitive Programming Curation API"}
+    return {"message": "Welcome to AlgoVault API"}

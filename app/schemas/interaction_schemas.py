@@ -8,8 +8,8 @@ class InteractionBase(BaseModel):
     interaction_type: InteractionType
 
 class InteractionCreate(InteractionBase):
-    user_id: UUID
     question_id: UUID
+    # user_id is derived from auth token, no longer in request body
 
 class InteractionResponse(InteractionBase):
     id: UUID
