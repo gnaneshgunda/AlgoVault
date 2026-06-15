@@ -9,10 +9,11 @@ class QuestionBase(BaseModel):
     platform: str
 
 class QuestionCreate(QuestionBase):
-    pass
+    submitter_id: UUID
 
 class QuestionResponse(QuestionBase):
     id: UUID
+    submitter_id: UUID
     normalized_url_hash: str
     total_views: int
     total_weighted_score: float

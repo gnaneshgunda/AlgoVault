@@ -20,30 +20,44 @@ class User(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     username = Column(String, unique=True, index=True, nullable=False)
-    credibility_tier = Column(Integer, default=1) # 1 = Base, 2 = Credible, etc.
-    codeforces_handle = Column(String, nullable=True)
+
+    # External Stats
+    codeforces_rating = Column(Integer, default=0)
+    leetcode_solved = Column(Integer, default=0)
+    atcoder_rating = Column(Integer, default=0)
+    cses_solved = Column(Integer, default=0)
+
+    # Gamification
+    credibility_tier = Column(Integer, default=1) # Deprecated, keeping for backwards compatibility until full migration
+    solving_score = Column(Integer, default=0)
+    curation_score = Column(Integer, default=0)
+    total_rating = Column(Integer, default=0)
+    rank_tier = Column(String, default='Scripter')
 
     lists = relationship("List", back_populates="user")
     interactions = relationship("Interaction", back_populates="user")
+    submitted_questions = relationship("Question", back_populates="submitter")
 
 class Question(Base):
     __tablename__ = "questions"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    submitter_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+
     normalized_url_hash = Column(String, unique=True, index=True, nullable=False)
     original_url = Column(String, nullable=False)
     title = Column(String, nullable=False)
-    platform = Column(String, nullable=False) # e.g., LeetCode, Codeforces
+    platform = Column(String, nullable=False)
 
     total_views = Column(Integer, default=0)
     total_weighted_score = Column(Float, default=0.0)
 
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
-    # Pre-computed scores for faster querying
     trending_score = Column(Float, default=0.0)
     wilson_score = Column(Float, default=0.0)
 
+    submitter = relationship("User", back_populates="submitted_questions")
     list_questions = relationship("ListQuestion", back_populates="question")
     interactions = relationship("Interaction", back_populates="question")
 
@@ -60,8 +74,6 @@ class List(Base):
 
     user = relationship("User", back_populates="lists")
     list_questions = relationship("ListQuestion", back_populates="list")
-
-    # self-referential relationship for forks
     forks = relationship("List")
 
 class ListQuestion(Base):

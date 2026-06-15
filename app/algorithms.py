@@ -3,8 +3,7 @@ import datetime
 
 WEIGHT_UPVOTE = 1.0
 WEIGHT_SAVE = 3.0
-CREDIBILITY_MULTIPLIER_BASE = 1.0
-CREDIBILITY_MULTIPLIER_HIGH = 2.0
+CREDIBILITY_MULTIPLIER_HIGH = 4.0 # Grandmaster ceiling
 MAX_SCORE_PER_VIEW = WEIGHT_SAVE * CREDIBILITY_MULTIPLIER_HIGH
 
 def calculate_wilson_score(total_weighted_score: float, total_views: int, z: float = 1.96) -> float:

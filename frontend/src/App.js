@@ -12,6 +12,7 @@ function App() {
     e.preventDefault();
     try {
       await createQuestion({
+        submitter_id: DEMO_USER_ID,
         original_url: urlInput,
         title: titleInput,
         platform: platformInput
@@ -40,6 +41,7 @@ function App() {
               <option value="Codeforces">Codeforces</option>
               <option value="LeetCode">LeetCode</option>
               <option value="CSES">CSES</option>
+              <option value="AtCoder">AtCoder</option>
             </select>
             <button type="submit">Submit Problem</button>
           </form>

@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.db.database import get_db
 from app.models.models import List, ListQuestion
 from app.schemas.list_schemas import ListCreate, ListResponse
+from app.tasks import background_update_user_rank
 from uuid import UUID
 
 router = APIRouter(
@@ -20,7 +21,7 @@ async def create_list(user_id: UUID, list_in: ListCreate, db: AsyncSession = Dep
     return new_list
 
 @router.post("/{list_id}/fork/{new_user_id}", response_model=ListResponse, status_code=status.HTTP_201_CREATED)
-async def fork_list(list_id: UUID, new_user_id: UUID, db: AsyncSession = Depends(get_db)):
+async def fork_list(list_id: UUID, new_user_id: UUID, background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(List).filter(List.id == list_id))
     original_list = result.scalars().first()
     if not original_list:
@@ -48,4 +49,8 @@ async def fork_list(list_id: UUID, new_user_id: UUID, db: AsyncSession = Depends
 
     await db.commit()
     await db.refresh(new_list)
+
+    # Trigger rank recalculation for original list owner
+    background_tasks.add_task(background_update_user_rank, original_list.user_id)
+
     return new_list
