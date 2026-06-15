@@ -1,0 +1,188 @@
+INFO:     Will watch for changes in these directories: ['/app']
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [403411] using WatchFiles
+INFO:     Started server process [404899]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     127.0.0.1:53878 - "OPTIONS /auth/register HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53886 - "POST /auth/register HTTP/1.1" 201 Created
+INFO:     127.0.0.1:53886 - "OPTIONS /users/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53878 - "GET /users/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53878 - "OPTIONS /feed/trending?skip=0&limit=20 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53886 - "GET /feed/trending?skip=0&limit=20 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53878 - "GET /feed/trending?skip=0&limit=20 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53878 - "GET /users/me HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/uvicorn/protocols/http/httptools_impl.py", line 421, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/uvicorn/middleware/proxy_headers.py", line 62, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/fastapi/applications.py", line 1162, in __call__
+    await super().__call__(scope, receive, send)
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/starlette/applications.py", line 90, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/starlette/middleware/cors.py", line 96, in __call__
+    await self.simple_response(scope, receive, send, request_headers=headers)
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/starlette/middleware/cors.py", line 154, in simple_response
+    await self.app(scope, receive, send)
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/fastapi/middleware/asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/starlette/routing.py", line 660, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/starlette/routing.py", line 680, in app
+    await route.handle(scope, receive, send)
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/fastapi/routing.py", line 1609, in handle
+    await self.original_router.handle(scope, receive, send)
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/fastapi/routing.py", line 2047, in handle
+    await included_router._handle_selected(scope, receive, send)
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/fastapi/routing.py", line 1629, in _handle_selected
+    await original_route.handle(scope, receive, send)
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/fastapi/routing.py", line 1218, in handle
+    await app(scope, receive, send)
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/fastapi/routing.py", line 143, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/fastapi/routing.py", line 129, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/fastapi/routing.py", line 683, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/fastapi/routing.py", line 337, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/app/api/users.py", line 45, in get_me
+    if not current_user.last_rating_update or (datetime.now(timezone.utc) - current_user.last_rating_update).total_seconds() > 86400:
+                                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+TypeError: can't subtract offset-naive and offset-aware datetimes
+INFO:     127.0.0.1:53886 - "GET /users/me HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/uvicorn/protocols/http/httptools_impl.py", line 421, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/uvicorn/middleware/proxy_headers.py", line 62, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/fastapi/applications.py", line 1162, in __call__
+    await super().__call__(scope, receive, send)
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/starlette/applications.py", line 90, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/starlette/middleware/cors.py", line 96, in __call__
+    await self.simple_response(scope, receive, send, request_headers=headers)
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/starlette/middleware/cors.py", line 154, in simple_response
+    await self.app(scope, receive, send)
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/fastapi/middleware/asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/starlette/routing.py", line 660, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/starlette/routing.py", line 680, in app
+    await route.handle(scope, receive, send)
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/fastapi/routing.py", line 1609, in handle
+    await self.original_router.handle(scope, receive, send)
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/fastapi/routing.py", line 2047, in handle
+    await included_router._handle_selected(scope, receive, send)
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/fastapi/routing.py", line 1629, in _handle_selected
+    await original_route.handle(scope, receive, send)
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/fastapi/routing.py", line 1218, in handle
+    await app(scope, receive, send)
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/fastapi/routing.py", line 143, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/fastapi/routing.py", line 129, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/fastapi/routing.py", line 683, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/fastapi/routing.py", line 337, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/app/api/users.py", line 45, in get_me
+    if not current_user.last_rating_update or (datetime.now(timezone.utc) - current_user.last_rating_update).total_seconds() > 86400:
+                                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+TypeError: can't subtract offset-naive and offset-aware datetimes
+WARNING:  WatchFiles detected changes in 'app/api/users.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [404899]
+INFO:     Started server process [511190]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     127.0.0.1:37018 - "OPTIONS /auth/register HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37020 - "POST /auth/register HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:54418 - "OPTIONS /auth/register HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54432 - "POST /auth/register HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:53200 - "OPTIONS /auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53202 - "POST /auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53202 - "OPTIONS /users/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53200 - "GET /users/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53200 - "OPTIONS /feed/trending?skip=0&limit=20 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53202 - "OPTIONS /feed/trending?skip=0&limit=20 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53206 - "GET /feed/trending?skip=0&limit=20 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53202 - "GET /feed/trending?skip=0&limit=20 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53202 - "GET /users/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53206 - "GET /users/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53206 - "GET /users/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53202 - "GET /users/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53202 - "OPTIONS /users/me/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53206 - "PUT /users/me/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53206 - "GET /users/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53206 - "GET /users/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53202 - "GET /users/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53202 - "OPTIONS /questions/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53206 - "POST /questions/ HTTP/1.1" 201 Created
+INFO:     127.0.0.1:53206 - "OPTIONS /lists/my HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53202 - "OPTIONS /lists/my HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59940 - "GET /lists/my HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53202 - "GET /lists/my HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53202 - "OPTIONS /lists/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59940 - "POST /lists/ HTTP/1.1" 201 Created
+INFO:     127.0.0.1:59940 - "OPTIONS /lists/33f5950a-df02-4d1f-881b-15aabf60cfff/questions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53202 - "POST /lists/33f5950a-df02-4d1f-881b-15aabf60cfff/questions HTTP/1.1" 201 Created
+INFO:     127.0.0.1:53202 - "GET /feed/trending?skip=0&limit=20 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59940 - "GET /feed/trending?skip=0&limit=20 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59940 - "GET /users/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53202 - "GET /users/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53202 - "GET /feed/trending?skip=0&limit=20 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59940 - "GET /feed/trending?skip=0&limit=20 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59940 - "OPTIONS /interactions/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53202 - "POST /interactions/ HTTP/1.1" 201 Created
+INFO:     127.0.0.1:53202 - "GET /users/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59940 - "GET /users/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59940 - "GET /lists/my HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53202 - "GET /lists/my HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53202 - "OPTIONS /lists/33f5950a-df02-4d1f-881b-15aabf60cfff HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59940 - "OPTIONS /lists/33f5950a-df02-4d1f-881b-15aabf60cfff HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56968 - "GET /lists/33f5950a-df02-4d1f-881b-15aabf60cfff HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59940 - "GET /lists/33f5950a-df02-4d1f-881b-15aabf60cfff HTTP/1.1" 200 OK

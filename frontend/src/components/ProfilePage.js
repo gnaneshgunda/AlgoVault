@@ -9,10 +9,10 @@ const ProfilePage = ({ onToast }) => {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [stats, setStats] = useState({
-    codeforces_rating: 0,
-    leetcode_solved: 0,
-    atcoder_rating: 0,
-    cses_solved: 0,
+    cf_handle: '',
+    lc_handle: '',
+    ac_handle: '',
+    cses_handle: '',
   });
 
   const fetchProfile = async () => {
@@ -21,10 +21,10 @@ const ProfilePage = ({ onToast }) => {
       const data = await getMe();
       setProfile(data);
       setStats({
-        codeforces_rating: data.codeforces_rating,
-        leetcode_solved: data.leetcode_solved,
-        atcoder_rating: data.atcoder_rating,
-        cses_solved: data.cses_solved,
+        cf_handle: data.cf_handle || '',
+        lc_handle: data.lc_handle || '',
+        ac_handle: data.ac_handle || '',
+        cses_handle: data.cses_handle || '',
       });
     } catch (e) {
       console.error(e);
@@ -147,25 +147,30 @@ const ProfilePage = ({ onToast }) => {
 
         <div className="grid-2">
           {[
-            { key: 'codeforces_rating', label: 'Codeforces Rating', max: 3500, color: '#3b82f6' },
-            { key: 'leetcode_solved', label: 'LeetCode Solved', max: 3000, color: '#f97316' },
-            { key: 'atcoder_rating', label: 'AtCoder Rating', max: 3000, color: '#22c55e' },
-            { key: 'cses_solved', label: 'CSES Solved', max: 300, color: '#a855f7' },
-          ].map(({ key, label, max, color }) => (
+            { key: 'codeforces_rating', handleKey: 'cf_handle', label: 'Codeforces', color: '#3b82f6', handlePlaceholder: 'Codeforces Handle' },
+            { key: 'leetcode_solved', handleKey: 'lc_handle', label: 'LeetCode', color: '#f97316', handlePlaceholder: 'LeetCode Username' },
+            { key: 'atcoder_rating', handleKey: 'ac_handle', label: 'AtCoder', color: '#22c55e', handlePlaceholder: 'AtCoder Handle' },
+            { key: 'cses_solved', handleKey: 'cses_handle', label: 'CSES', color: '#a855f7', handlePlaceholder: 'CSES Username' },
+          ].map(({ key, handleKey, label, color, handlePlaceholder }) => (
             <div key={key} className="stat-card">
               {editing ? (
                 <input
                   className="input"
-                  type="number"
-                  min="0"
-                  value={stats[key]}
-                  onChange={(e) => setStats({ ...stats, [key]: parseInt(e.target.value) || 0 })}
-                  style={{ textAlign: 'center', fontSize: '1.2rem', fontWeight: 700 }}
+                  type="text"
+                  placeholder={handlePlaceholder}
+                  value={stats[handleKey]}
+                  onChange={(e) => setStats({ ...stats, [handleKey]: e.target.value })}
+                  style={{ textAlign: 'center', fontSize: '1rem', fontWeight: 600 }}
                 />
               ) : (
-                <div className="stat-value" style={{ color }}>{profile[key]}</div>
+                <>
+                  <div className="stat-value" style={{ color }}>{profile[key]}</div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 4 }}>
+                    {profile[handleKey] ? `@${profile[handleKey]}` : 'No Handle Set'}
+                  </div>
+                </>
               )}
-              <div className="stat-label">{label}</div>
+              <div className="stat-label" style={{ marginTop: 8 }}>{label}</div>
             </div>
           ))}
         </div>

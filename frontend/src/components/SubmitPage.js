@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createQuestion } from '../api';
 import { Send, LinkIcon, Type, Globe } from 'lucide-react';
+import AddToListModal from './AddToListModal';
 
 const PLATFORMS = [
   'Auto-Detect', 'Codeforces', 'LeetCode', 'AtCoder', 'CSES',
@@ -14,6 +15,11 @@ const SubmitPage = ({ onToast }) => {
   const [platform, setPlatform] = useState('Auto-Detect');
   const [loading, setLoading] = useState(false);
   const [detectedPlatform, setDetectedPlatform] = useState('');
+
+  // Post-submit list selection
+  const [showListModal, setShowListModal] = useState(false);
+  const [submittedQuestionId, setSubmittedQuestionId] = useState(null);
+
   const navigate = useNavigate();
 
   // Auto-detect platform from URL as user types
@@ -48,18 +54,28 @@ const SubmitPage = ({ onToast }) => {
       if (platform !== 'Auto-Detect') {
         data.platform = platform;
       }
-      await createQuestion(data);
+      const newQuestion = await createQuestion(data);
       onToast?.('Problem submitted successfully!', 'success');
+
+      // Prompt user to add the newly submitted question to a list
+      setSubmittedQuestionId(newQuestion.id);
+      setShowListModal(true);
+
       setUrl('');
       setTitle('');
       setPlatform('Auto-Detect');
       setDetectedPlatform('');
-      navigate('/');
     } catch (err) {
       onToast?.(err.response?.data?.detail || 'Failed to submit', 'error');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleListModalClose = () => {
+     setShowListModal(false);
+     setSubmittedQuestionId(null);
+     navigate('/');
   };
 
   return (
@@ -130,6 +146,14 @@ const SubmitPage = ({ onToast }) => {
           </button>
         </form>
       </div>
+
+      {showListModal && submittedQuestionId && (
+        <AddToListModal
+          questionId={submittedQuestionId}
+          onClose={handleListModalClose}
+          onToast={onToast}
+        />
+      )}
     </div>
   );
 };

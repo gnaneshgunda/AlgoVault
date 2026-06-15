@@ -12,6 +12,11 @@ class ListBase(BaseModel):
 class ListCreate(ListBase):
     pass
 
+class ListUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    is_public: Optional[bool] = None
+
 class ListResponse(ListBase):
     id: UUID
     user_id: UUID

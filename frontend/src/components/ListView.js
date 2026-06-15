@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getListDetail, removeQuestionFromList, forkList } from '../api';
-import { ArrowLeft, GitFork, Globe, Lock, Trash2, ExternalLink } from 'lucide-react';
+import { getListDetail, removeQuestionFromList, forkList, registerQuestionView, updateList } from '../api';
+import { ArrowLeft, GitFork, Globe, Lock, Trash2, ExternalLink, Edit3, X, Check } from 'lucide-react';
 
 const PLATFORM_CLASS = {
   'Codeforces': 'codeforces',
@@ -16,6 +16,27 @@ const ListView = ({ currentUserId, onToast }) => {
   const [listData, setListData] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  const [editing, setEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDesc, setEditDesc] = useState('');
+  const [editPublic, setEditPublic] = useState(false);
+
+  useEffect(() => {
+    const fetchList = async () => {
+      setLoading(true);
+      try {
+        const data = await getListDetail(listId);
+        setListData(data);
+      } catch (e) {
+        onToast?.(e.response?.data?.detail || 'Failed to load list', 'error');
+        navigate('/lists');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchList();
+  }, [listId, navigate, onToast]);
+
   const fetchList = async () => {
     setLoading(true);
     try {
@@ -29,7 +50,27 @@ const ListView = ({ currentUserId, onToast }) => {
     }
   };
 
-  useEffect(() => { fetchList(); }, [listId]);
+  const handleEditInit = () => {
+    setEditTitle(listData.title);
+    setEditDesc(listData.description || '');
+    setEditPublic(listData.is_public);
+    setEditing(true);
+  };
+
+  const handleEditSave = async () => {
+    try {
+      await updateList(listId, {
+        title: editTitle,
+        description: editDesc,
+        is_public: editPublic,
+      });
+      onToast?.('List updated!', 'success');
+      setEditing(false);
+      fetchList();
+    } catch (e) {
+      onToast?.(e.response?.data?.detail || 'Failed to update list', 'error');
+    }
+  };
 
   const handleRemove = async (questionId) => {
     try {
@@ -64,28 +105,78 @@ const ListView = ({ currentUserId, onToast }) => {
 
       <div className="card-glass" style={{ marginBottom: 24 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-              {listData.is_public ? <Globe size={16} color="var(--accent-secondary)" /> : <Lock size={16} color="var(--text-muted)" />}
-              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                {listData.is_public ? 'Public' : 'Private'}
-              </span>
+          {editing ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, flex: 1, paddingRight: 16 }}>
+              <input
+                className="input"
+                type="text"
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                placeholder="List Title"
+                style={{ fontSize: '1.2rem', fontWeight: 'bold' }}
+              />
+              <input
+                className="input"
+                type="text"
+                value={editDesc}
+                onChange={(e) => setEditDesc(e.target.value)}
+                placeholder="Description"
+              />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <input
+                  type="checkbox"
+                  id="editPublic"
+                  checked={editPublic}
+                  onChange={(e) => setEditPublic(e.target.checked)}
+                  style={{ accentColor: 'var(--accent-primary)' }}
+                />
+                <label htmlFor="editPublic" style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                  Make this list public
+                </label>
+              </div>
             </div>
-            <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-bright)', marginBottom: 4 }}>
-              {listData.title}
-            </h1>
-            {listData.description && (
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>{listData.description}</p>
-            )}
-            <div style={{ marginTop: 8, fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-              by <span style={{ color: 'var(--accent-secondary)' }}>@{listData.owner_username}</span> · {listData.question_count} problems
+          ) : (
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                {listData.is_public ? <Globe size={16} color="var(--accent-secondary)" /> : <Lock size={16} color="var(--text-muted)" />}
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  {listData.is_public ? 'Public' : 'Private'}
+                </span>
+              </div>
+              <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-bright)', marginBottom: 4 }}>
+                {listData.title}
+              </h1>
+              {listData.description && (
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>{listData.description}</p>
+              )}
+              <div style={{ marginTop: 8, fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                by <span style={{ color: 'var(--accent-secondary)' }}>@{listData.owner_username}</span> · {listData.question_count} problems
+              </div>
             </div>
-          </div>
-          {!isOwner && (
-            <button className="btn btn-secondary" onClick={handleFork}>
-              <GitFork size={14} /> Fork
-            </button>
           )}
+
+          <div style={{ display: 'flex', gap: 8 }}>
+            {isOwner ? (
+              editing ? (
+                <>
+                  <button className="btn btn-primary btn-sm" onClick={handleEditSave}>
+                    <Check size={14} /> Save
+                  </button>
+                  <button className="btn btn-ghost btn-sm" onClick={() => setEditing(false)}>
+                    <X size={14} /> Cancel
+                  </button>
+                </>
+              ) : (
+                <button className="btn btn-ghost btn-sm" onClick={handleEditInit}>
+                  <Edit3 size={14} /> Edit
+                </button>
+              )
+            ) : (
+              <button className="btn btn-secondary" onClick={handleFork}>
+                <GitFork size={14} /> Fork
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -117,7 +208,15 @@ const ListView = ({ currentUserId, onToast }) => {
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
-                  <a href={q.original_url} target="_blank" rel="noopener noreferrer" className="btn btn-ghost btn-sm">
+                  <a
+                    href={q.original_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => {
+                      registerQuestionView(q.id).catch(err => console.error(err));
+                    }}
+                  >
                     <ExternalLink size={14} />
                   </a>
                   {isOwner && (

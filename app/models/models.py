@@ -24,10 +24,17 @@ class User(Base):
     hashed_password = Column(String, nullable=False)
 
     # External Stats
+    cf_handle = Column(String, nullable=True)
+    lc_handle = Column(String, nullable=True)
+    ac_handle = Column(String, nullable=True)
+    cses_handle = Column(String, nullable=True)
+
     codeforces_rating = Column(Integer, default=0)
     leetcode_solved = Column(Integer, default=0)
     atcoder_rating = Column(Integer, default=0)
     cses_solved = Column(Integer, default=0)
+
+    last_rating_update = Column(DateTime(timezone=True), nullable=True)
 
     # Gamification
     solving_score = Column(Integer, default=0)

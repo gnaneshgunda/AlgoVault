@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, desc
 from app.db.database import get_db
 from app.models.models import List, ListQuestion, Question, User, Interaction, InteractionType
-from app.schemas.list_schemas import ListCreate, ListResponse, ListDetailResponse, ListQuestionAdd
+from app.schemas.list_schemas import ListCreate, ListUpdate, ListResponse, ListDetailResponse, ListQuestionAdd
 from app.algorithms import WEIGHT_SAVE, calculate_wilson_score, calculate_decayed_gravity
 from app.gamification import get_weight_multiplier_for_rank
 from app.tasks import background_update_user_rank
@@ -28,6 +28,37 @@ def _build_list_response(lst, question_count=0, owner_username=None):
         owner_username=owner_username,
     )
 
+
+@router.put("/{list_id}", response_model=ListResponse)
+async def update_list(
+    list_id: UUID,
+    list_in: ListUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    result = await db.execute(select(List).filter(List.id == list_id))
+    lst = result.scalars().first()
+    if not lst:
+        raise HTTPException(status_code=404, detail="List not found")
+    if lst.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not your list")
+
+    if list_in.title is not None:
+        lst.title = list_in.title
+    if list_in.description is not None:
+        lst.description = list_in.description
+    if list_in.is_public is not None:
+        lst.is_public = list_in.is_public
+
+    await db.commit()
+    await db.refresh(lst)
+
+    count_result = await db.execute(
+        select(func.count()).select_from(ListQuestion).filter(ListQuestion.list_id == lst.id)
+    )
+    count = count_result.scalar_one()
+
+    return _build_list_response(lst, count, current_user.username)
 
 @router.post("/", response_model=ListResponse, status_code=status.HTTP_201_CREATED)
 async def create_list(
