@@ -14,6 +14,7 @@ HEADERS = {
 async def fetch_codeforces_rating(handle: str) -> tuple[int, bool]:
     if not handle:
         return 0, True
+    handle = handle.lstrip('@').strip()
     try:
         async with httpx.AsyncClient() as client:
             resp = await client.get(
@@ -39,6 +40,7 @@ async def fetch_codeforces_rating(handle: str) -> tuple[int, bool]:
 async def fetch_leetcode_solved(handle: str) -> tuple[int, bool]:
     if not handle:
         return 0, True
+    handle = handle.lstrip('@').strip()
     try:
         async with httpx.AsyncClient() as client:
             query = """
@@ -80,7 +82,7 @@ async def fetch_leetcode_solved(handle: str) -> tuple[int, bool]:
 async def fetch_atcoder_rating(handle: str) -> tuple[int, bool]:
     if not handle:
         return 0, True
-    handle = handle.strip()
+    handle = handle.lstrip('@').strip()
     try:
         async with httpx.AsyncClient() as client:
             resp = await client.get(
@@ -107,7 +109,7 @@ async def fetch_atcoder_rating(handle: str) -> tuple[int, bool]:
 async def fetch_cses_solved(handle: str) -> tuple[int, bool]:
     if not handle:
         return 0, True
-    handle = handle.strip()
+    handle = handle.lstrip('@').strip()
     try:
         async with httpx.AsyncClient() as client:
             resp = await client.get(
