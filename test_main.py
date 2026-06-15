@@ -6,7 +6,6 @@ from app.db.database import engine, Base
 
 @pytest_asyncio.fixture(autouse=True)
 async def setup_db():
-    # Setup test database
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     yield

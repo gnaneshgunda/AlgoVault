@@ -15,12 +15,11 @@ router = APIRouter(
 async def create_question(question_in: QuestionCreate, db: AsyncSession = Depends(get_db)):
     url_hash = normalize_and_hash_url(question_in.original_url)
 
-    # Check if question already exists
     result = await db.execute(select(Question).filter(Question.normalized_url_hash == url_hash))
     existing_question = result.scalars().first()
 
     if existing_question:
-        return existing_question # Return existing if already there (idempotent-ish)
+        return existing_question
 
     new_question = Question(
         normalized_url_hash=url_hash,
