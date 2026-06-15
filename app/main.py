@@ -17,6 +17,7 @@ app = FastAPI(title="AlgoVault API", lifespan=lifespan)
 import os
 origins = [
     "http://localhost:3000",
+    "http://127.0.0.1:3000",
     "https://algo-vault-nu.vercel.app",
 ]
 env_origins = os.getenv("CORS_ORIGINS")
