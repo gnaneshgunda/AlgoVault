@@ -52,6 +52,8 @@ def create_access_token(data: dict) -> str:
 
 # --- Dependency: Get Current User ---
 
+from fastapi import Request
+
 async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_db)) -> User:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -71,6 +73,21 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession
     if user is None:
         raise credentials_exception
     return user
+
+async def get_optional_current_user(request: Request, db: AsyncSession = Depends(get_db)):
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        return None
+    token = auth_header.split(" ")[1]
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        user_id: str = payload.get("sub")
+        if user_id is None:
+            return None
+        result = await db.execute(select(User).filter(User.id == UUID(user_id)))
+        return result.scalars().first()
+    except Exception:
+        return None
 
 
 # --- Routes ---

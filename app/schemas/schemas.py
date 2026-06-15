@@ -21,5 +21,7 @@ class QuestionResponse(QuestionBase):
     wilson_score: float
     created_at: datetime
     submitter_username: Optional[str] = None
+    has_upvoted: bool = False
+    has_saved: bool = False
 
     model_config = ConfigDict(from_attributes=True)

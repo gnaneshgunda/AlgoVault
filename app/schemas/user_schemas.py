@@ -21,14 +21,19 @@ class UserCreate(UserBase):
     password: str
 
 class UserStatsUpdate(BaseModel):
-    codeforces_rating: Optional[int] = None
-    leetcode_solved: Optional[int] = None
-    atcoder_rating: Optional[int] = None
-    cses_solved: Optional[int] = None
+    cf_handle: Optional[str] = None
+    lc_handle: Optional[str] = None
+    ac_handle: Optional[str] = None
+    cses_handle: Optional[str] = None
 
 class UserResponse(UserBase):
     id: UUID
     email: str
+
+    cf_handle: Optional[str] = None
+    lc_handle: Optional[str] = None
+    ac_handle: Optional[str] = None
+    cses_handle: Optional[str] = None
 
     codeforces_rating: int
     leetcode_solved: int

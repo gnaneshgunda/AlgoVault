@@ -75,6 +75,20 @@ async def create_question(
         submitter_username=current_user.username,
     )
 
+@router.post("/{question_id}/view")
+async def register_view(
+    question_id: UUID,
+    db: AsyncSession = Depends(get_db)
+):
+    result = await db.execute(select(Question).filter(Question.id == question_id))
+    question = result.scalars().first()
+    if not question:
+        raise HTTPException(status_code=404, detail="Question not found")
+
+    question.total_views += 1
+    await db.commit()
+    return {"status": "success", "total_views": question.total_views}
+
 @router.get("/", response_model=list[QuestionResponse])
 async def list_questions(
     skip: int = 0,

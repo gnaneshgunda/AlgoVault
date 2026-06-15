@@ -14,24 +14,42 @@ const ListsPage = ({ onToast }) => {
   const [newPublic, setNewPublic] = useState(true);
   const navigate = useNavigate();
 
-  const fetchLists = async () => {
-    setLoading(true);
-    try {
-      if (tab === 'my') {
-        const data = await getMyLists();
-        setMyLists(data);
-      } else {
-        const data = await getPublicLists();
-        setPublicLists(data);
+  useEffect(() => {
+    const fetchLists = async () => {
+      setLoading(true);
+      try {
+        if (tab === 'my') {
+          const data = await getMyLists();
+          setMyLists(data);
+        } else {
+          const data = await getPublicLists();
+          setPublicLists(data);
+        }
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
       }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
+    fetchLists();
+  }, [tab]);
 
-  useEffect(() => { fetchLists(); }, [tab]);
+  const fetchListsRef = async () => {
+      setLoading(true);
+      try {
+        if (tab === 'my') {
+          const data = await getMyLists();
+          setMyLists(data);
+        } else {
+          const data = await getPublicLists();
+          setPublicLists(data);
+        }
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
+  };
 
   const handleCreate = async (e) => {
     e.preventDefault();
@@ -41,7 +59,7 @@ const ListsPage = ({ onToast }) => {
       setShowModal(false);
       setNewTitle('');
       setNewDesc('');
-      fetchLists();
+      fetchListsRef();
     } catch (err) {
       onToast?.(err.response?.data?.detail || 'Failed to create list', 'error');
     }

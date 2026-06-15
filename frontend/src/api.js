@@ -61,6 +61,11 @@ export const listQuestions = async (skip = 0, limit = 50) => {
   return res.data;
 };
 
+export const registerQuestionView = async (questionId) => {
+  const res = await api.post(`/questions/${questionId}/view`);
+  return res.data;
+};
+
 // --- Interactions ---
 export const createInteraction = async (data) => {
   const res = await api.post('/interactions/', data);
@@ -90,6 +95,11 @@ export const getPublicLists = async (skip = 0, limit = 20) => {
 
 export const getListDetail = async (listId) => {
   const res = await api.get(`/lists/${listId}`);
+  return res.data;
+};
+
+export const updateList = async (listId, data) => {
+  const res = await api.put(`/lists/${listId}`, data);
   return res.data;
 };
 

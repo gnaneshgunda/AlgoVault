@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ThumbsUp, Bookmark, ExternalLink, Eye, TrendingUp, Award } from 'lucide-react';
-import { createInteraction } from '../api';
+import { createInteraction, registerQuestionView } from '../api';
+import AddToListModal from './AddToListModal';
 
 const PLATFORM_CLASS = {
   'Codeforces': 'codeforces',
@@ -10,10 +11,11 @@ const PLATFORM_CLASS = {
 };
 
 const QuestionCard = ({ question, isLoggedIn, onToast, style }) => {
-  const [upvoted, setUpvoted] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [upvoted, setUpvoted] = useState(question.has_upvoted || false);
+  const [saved, setSaved] = useState(question.has_saved || false);
   const [animateUpvote, setAnimateUpvote] = useState(false);
   const [animateSave, setAnimateSave] = useState(false);
+  const [showListModal, setShowListModal] = useState(false);
 
   const handleUpvote = async () => {
     if (upvoted || !isLoggedIn) {
@@ -39,25 +41,30 @@ const QuestionCard = ({ question, isLoggedIn, onToast, style }) => {
   };
 
   const handleSave = async () => {
-    if (saved || !isLoggedIn) {
-      if (!isLoggedIn) onToast?.('Please login to save', 'error');
+    if (!isLoggedIn) {
+      onToast?.('Please login to save', 'error');
       return;
     }
-    try {
-      await createInteraction({
-        question_id: question.id,
-        interaction_type: 'Save'
-      });
-      setSaved(true);
-      setAnimateSave(true);
-      setTimeout(() => setAnimateSave(false), 400);
-      onToast?.('Saved!', 'success');
-    } catch (e) {
-      const msg = e.response?.data?.detail || 'Failed to save';
-      if (msg === 'Interaction already exists') {
+
+    // Always show modal to pick a list, even if they already saved it
+    setShowListModal(true);
+
+    // If not already saved, register the Save interaction too
+    if (!saved) {
+      try {
+        await createInteraction({
+          question_id: question.id,
+          interaction_type: 'Save'
+        });
         setSaved(true);
+        setAnimateSave(true);
+        setTimeout(() => setAnimateSave(false), 400);
+      } catch (e) {
+        // Ignore interaction already exists error silently here since primary action is adding to list
+        if (e.response?.data?.detail === 'Interaction already exists') {
+           setSaved(true);
+        }
       }
-      onToast?.(msg, 'error');
     }
   };
 
@@ -105,8 +112,17 @@ const QuestionCard = ({ question, isLoggedIn, onToast, style }) => {
             </span>
           </div>
         </div>
-        <a href={question.original_url} target="_blank" rel="noopener noreferrer"
-          className="btn btn-ghost btn-sm" style={{ flexShrink: 0 }}>
+        <a
+          href={question.original_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="btn btn-ghost btn-sm"
+          style={{ flexShrink: 0 }}
+          onClick={(e) => {
+            // Register view in background, don't await so it doesn't block the link
+            registerQuestionView(question.id).catch(err => console.error("Failed to register view", err));
+          }}
+        >
           <ExternalLink size={14} /> Solve
         </a>
       </div>
@@ -125,6 +141,14 @@ const QuestionCard = ({ question, isLoggedIn, onToast, style }) => {
           <Bookmark size={14} /> {saved ? 'Saved' : 'Save'}
         </button>
       </div>
+
+      {showListModal && (
+        <AddToListModal
+          questionId={question.id}
+          onClose={() => setShowListModal(false)}
+          onToast={onToast}
+        />
+      )}
     </div>
   );
 };
