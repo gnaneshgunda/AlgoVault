@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { getMyLists, createList, addQuestionToList } from '../api';
+import { getMyLists, createList, addQuestionToList, getListsContainingQuestion, removeQuestionFromList } from '../api';
 import { Plus, X, List as ListIcon } from 'lucide-react';
 
 const AddToListModal = ({ questionId, onClose, onToast }) => {
   const [lists, setLists] = useState([]);
+  const [selectedListIds, setSelectedListIds] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Create new list state
@@ -15,8 +16,12 @@ const AddToListModal = ({ questionId, onClose, onToast }) => {
   const fetchLists = async () => {
     setLoading(true);
     try {
-      const data = await getMyLists();
-      setLists(data);
+      const [allLists, activeListIds] = await Promise.all([
+        getMyLists(),
+        getListsContainingQuestion(questionId)
+      ]);
+      setLists(allLists);
+      setSelectedListIds(activeListIds);
     } catch (e) {
       console.error(e);
     } finally {
@@ -26,15 +31,22 @@ const AddToListModal = ({ questionId, onClose, onToast }) => {
 
   useEffect(() => {
     fetchLists();
-  }, []);
+  }, [questionId]);
 
-  const handleAddToList = async (listId) => {
+  const handleToggleList = async (listId) => {
+    const isSelected = selectedListIds.includes(listId);
     try {
-      await addQuestionToList(listId, { question_id: questionId });
-      onToast?.('Added to list!', 'success');
-      onClose();
+      if (isSelected) {
+        await removeQuestionFromList(listId, questionId);
+        setSelectedListIds(selectedListIds.filter(id => id !== listId));
+        onToast?.('Removed from list!', 'success');
+      } else {
+        await addQuestionToList(listId, { question_id: questionId });
+        setSelectedListIds([...selectedListIds, listId]);
+        onToast?.('Added to list!', 'success');
+      }
     } catch (e) {
-      onToast?.(e.response?.data?.detail || 'Failed to add to list', 'error');
+      onToast?.(e.response?.data?.detail || 'Failed to update list status', 'error');
     }
   };
 
@@ -45,7 +57,12 @@ const AddToListModal = ({ questionId, onClose, onToast }) => {
       const newList = await createList({ title: newTitle, description: newDesc, is_public: true });
       onToast?.('List created!', 'success');
       // Automatically add to the newly created list
-      await handleAddToList(newList.id);
+      await addQuestionToList(newList.id, { question_id: questionId });
+      // Refresh
+      await fetchLists();
+      setShowCreate(false);
+      setNewTitle('');
+      setNewDesc('');
     } catch (err) {
       onToast?.(err.response?.data?.detail || 'Failed to create list', 'error');
     } finally {
@@ -57,7 +74,7 @@ const AddToListModal = ({ questionId, onClose, onToast }) => {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-          <h2 className="modal-title" style={{ margin: 0 }}>Save to List</h2>
+          <h2 className="modal-title" style={{ margin: 0 }}>Save to Lists</h2>
           <button className="btn btn-ghost btn-icon" onClick={onClose}>
             <X size={18} />
           </button>
@@ -94,23 +111,37 @@ const AddToListModal = ({ questionId, onClose, onToast }) => {
                </div>
             ) : (
               <div style={{ maxHeight: '300px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {lists.map(lst => (
-                  <button
-                    key={lst.id}
-                    className="btn btn-secondary"
-                    style={{ justifyContent: 'flex-start', padding: '12px 16px' }}
-                    onClick={() => handleAddToList(lst.id)}
-                  >
-                    <ListIcon size={16} />
-                    <span style={{ marginLeft: 8, flex: 1, textAlign: 'left' }}>{lst.title}</span>
-                  </button>
-                ))}
+                {lists.map(lst => {
+                  const isSelected = selectedListIds.includes(lst.id);
+                  return (
+                    <button
+                      key={lst.id}
+                      className={`btn ${isSelected ? 'btn-primary' : 'btn-secondary'}`}
+                      style={{ justifyContent: 'flex-start', padding: '12px 16px', border: isSelected ? '1px solid var(--accent-primary)' : '1px solid transparent' }}
+                      onClick={() => handleToggleList(lst.id)}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        readOnly
+                        style={{ marginRight: 12, accentColor: 'var(--accent-primary)', pointerEvents: 'none' }}
+                      />
+                      <ListIcon size={16} />
+                      <span style={{ marginLeft: 8, flex: 1, textAlign: 'left' }}>{lst.title}</span>
+                    </button>
+                  );
+                })}
               </div>
             )}
 
-            <button className="btn btn-ghost" onClick={() => setShowCreate(true)} style={{ marginTop: 8 }}>
-              <Plus size={16} /> Create New List
-            </button>
+            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+              <button className="btn btn-primary" onClick={onClose} style={{ flex: 1 }}>
+                Done
+              </button>
+              <button className="btn btn-ghost" onClick={() => setShowCreate(true)}>
+                <Plus size={16} style={{ marginRight: 4 }} /> New List
+              </button>
+            </div>
           </div>
         )}
       </div>

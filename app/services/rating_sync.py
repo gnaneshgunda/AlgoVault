@@ -48,17 +48,36 @@ async def fetch_leetcode_solved(handle: str) -> int:
         pass
     return 0
 
-# Dummy placeholders for atcoder and cses since their APIs are harder to scrape directly without proper endpoints
 async def fetch_atcoder_rating(handle: str) -> int:
     if not handle:
         return 0
-    # In a real scenario, scrape AtCoder profile or use an unofficial API.
+    handle = handle.strip()
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(f"https://atcoder.jp/users/{handle}", headers={'User-Agent': 'Mozilla/5.0'}, timeout=5.0)
+            if resp.status_code == 200:
+                import re
+                m = re.search(r'Rating</th>\s*<td>\s*(?:<img[^>]*>)?\s*<span\s+class=[\"\'][^\"\'\s]+[\"\']>(\d+)</span>', resp.text)
+                if m:
+                    return int(m.group(1))
+    except Exception:
+        pass
     return 0
 
 async def fetch_cses_solved(handle: str) -> int:
     if not handle:
         return 0
-    # In a real scenario, scrape CSES profile.
+    handle = handle.strip()
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(f"https://cses.fi/user/{handle}", headers={'User-Agent': 'Mozilla/5.0'}, timeout=5.0)
+            if resp.status_code == 200:
+                import re
+                m = re.search(r'Submission count:</td><td\s*>\s*(\d+)', resp.text)
+                if m:
+                    return int(m.group(1))
+    except Exception:
+        pass
     return 0
 
 async def sync_user_ratings(user):

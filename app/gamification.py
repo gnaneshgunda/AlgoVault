@@ -16,34 +16,36 @@ def calculate_solving_score(user: User) -> int:
     return min(score, 1500)
 
 async def calculate_curation_score(user_id: UUID, db: AsyncSession) -> int:
-    # +10 points per unique question submitted
+    import math
+
+    # Submissions component: max 500, scaled by 10 * sqrt(S)
     q_result = await db.execute(select(func.count(Question.id)).filter(Question.submitter_id == user_id))
     submitted_count = q_result.scalar_one()
+    sub_contrib = min(500, int(10 * math.sqrt(submitted_count)))
 
-    # +5 points per Save/Upvote on their questions
+    # Interactions component: max 500, scaled by 50 * sqrt(I)
     interactions_result = await db.execute(
         select(func.count(Interaction.id))
         .join(Question, Interaction.question_id == Question.id)
         .filter(Question.submitter_id == user_id)
-        # Exclude their own interactions on their own questions if desired, but we'll count all for now
     )
     interaction_count = interactions_result.scalar_one()
+    int_contrib = min(500, int(50 * math.sqrt(interaction_count)))
 
-    # +50 points per fork of their lists
-    # Find all lists owned by this user
+    # Forks component: max 500, scaled by 150 * sqrt(F)
     lists_result = await db.execute(select(List.id).filter(List.user_id == user_id))
     user_list_ids = [row[0] for row in lists_result.all()]
 
     fork_count = 0
     if user_list_ids:
-        # Count lists that have forked_from_list_id in the user's lists
         fork_result = await db.execute(
             select(func.count(List.id))
             .filter(List.forked_from_list_id.in_(user_list_ids))
         )
         fork_count = fork_result.scalar_one()
+    fork_contrib = min(500, int(150 * math.sqrt(fork_count)))
 
-    score = (submitted_count * 10) + (interaction_count * 5) + (fork_count * 50)
+    score = sub_contrib + int_contrib + fork_contrib
     return min(score, 1500)
 
 async def update_user_rank(user_id: UUID, db: AsyncSession):

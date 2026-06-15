@@ -1,9 +1,14 @@
+import os
+# Force testing to use an isolated local SQLite database to prevent dropping production tables
+os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///./test_isolated.db"
+
 import pytest
 import pytest_asyncio
 import asyncio
 from httpx import AsyncClient, ASGITransport
 from app.main import app
 from app.db.database import engine, Base
+
 
 @pytest_asyncio.fixture(autouse=True)
 async def setup_db():
@@ -84,6 +89,13 @@ async def test_full_gamification_flow():
         assert isinstance(q_res.json()["normalized_url_hash"], str)
         assert len(q_res.json()["normalized_url_hash"]) == 64
 
+        # Wait for background task to update user rank and verify the new curation score
+        await asyncio.sleep(0.5)
+        profile_res = await ac.get("/users/me", headers=auth_headers(token))
+        assert profile_res.status_code == 200
+        # 1 submission should give 10 * sqrt(1) = 10 curation score
+        assert profile_res.json()["curation_score"] == 10
+
         # 4. Create second user and interact
         token2, u2_id = await register_user(ac, "noob", "noob@test.com", "pass456")
 
@@ -92,6 +104,13 @@ async def test_full_gamification_flow():
             "interaction_type": "Upvote"
         }, headers=auth_headers(token2))
         assert int_res.status_code == 201
+
+        # Delete interaction (undo upvote)
+        del_res = await ac.delete("/interactions/", params={
+            "question_id": q_id,
+            "interaction_type": "Upvote"
+        }, headers=auth_headers(token2))
+        assert del_res.status_code == 204
 
         # 5. Check feeds
         trending = await ac.get("/feed/trending")

@@ -75,6 +75,57 @@ async def create_question(
         submitter_username=current_user.username,
     )
 
+
+@router.get("/parse-title")
+async def parse_title(url: str):
+    from urllib.parse import urlparse
+    import re
+    import httpx
+    from app.parsers import auto_detect_platform
+
+    platform = auto_detect_platform(url)
+    
+    try:
+        if platform.lower() == "leetcode":
+            match = re.search(r'/problems/([^/]+)', url)
+            if match:
+                slug = match.group(1)
+                title = " ".join([w.capitalize() for w in slug.split("-")])
+                return {"title": title, "platform": platform}
+
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
+        async with httpx.AsyncClient(follow_redirects=True) as client:
+            resp = await client.get(url, headers=headers, timeout=5.0)
+            if resp.status_code == 200:
+                title_match = re.search(r'<title>(.*?)</title>', resp.text, re.IGNORECASE | re.DOTALL)
+                if title_match:
+                    raw_title = title_match.group(1).strip()
+                    if "just a moment" in raw_title.lower() or "cloudflare" in raw_title.lower():
+                        raise ValueError("Cloudflare block")
+                    if platform.lower() == "cses":
+                        raw_title = re.sub(r'^CSES\s*-\s*', '', raw_title)
+                    return {"title": raw_title, "platform": platform}
+    except Exception:
+        pass
+
+    # Fallbacks
+    if platform.lower() == "codeforces":
+        match = re.search(r'/(?:contest|problemset/problem)/(\d+)/(?:problem/)?([A-Za-z0-9]+)', url)
+        if match:
+            return {"title": f"Codeforces {match.group(1)}{match.group(2).upper()}", "platform": platform}
+
+    try:
+        parsed_url = urlparse(url)
+        path_parts = [p for p in parsed_url.path.split('/') if p]
+        if path_parts:
+            title = " ".join([w.capitalize() for w in path_parts[-1].replace('-', ' ').replace('_', ' ').split()])
+            return {"title": title, "platform": platform}
+    except Exception:
+        pass
+
+    return {"title": "New Problem", "platform": platform}
+
+
 @router.post("/{question_id}/view")
 async def register_view(
     question_id: UUID,

@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:8000';
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -66,6 +66,11 @@ export const registerQuestionView = async (questionId) => {
   return res.data;
 };
 
+export const parseQuestionTitle = async (url) => {
+  const res = await api.get('/questions/parse-title', { params: { url } });
+  return res.data;
+};
+
 // --- Interactions ---
 export const createInteraction = async (data) => {
   const res = await api.post('/interactions/', data);
@@ -77,6 +82,16 @@ export const getMyInteractions = async () => {
   return res.data;
 };
 
+export const deleteInteraction = async (questionId, interactionType) => {
+  const res = await api.delete('/interactions/', {
+    params: {
+      question_id: questionId,
+      interaction_type: interactionType
+    }
+  });
+  return res.data;
+};
+
 // --- Lists ---
 export const createList = async (data) => {
   const res = await api.post('/lists/', data);
@@ -85,6 +100,11 @@ export const createList = async (data) => {
 
 export const getMyLists = async () => {
   const res = await api.get('/lists/my');
+  return res.data;
+};
+
+export const getListsContainingQuestion = async (questionId) => {
+  const res = await api.get(`/lists/containing-question/${questionId}`);
   return res.data;
 };
 

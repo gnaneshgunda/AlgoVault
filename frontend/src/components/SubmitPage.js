@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { createQuestion } from '../api';
+import { createQuestion, parseQuestionTitle } from '../api';
 import { Send, LinkIcon, Type, Globe } from 'lucide-react';
 import AddToListModal from './AddToListModal';
 
@@ -14,6 +14,7 @@ const SubmitPage = ({ onToast }) => {
   const [title, setTitle] = useState('');
   const [platform, setPlatform] = useState('Auto-Detect');
   const [loading, setLoading] = useState(false);
+  const [loadingTitle, setLoadingTitle] = useState(false);
   const [detectedPlatform, setDetectedPlatform] = useState('');
 
   // Post-submit list selection
@@ -40,6 +41,25 @@ const SubmitPage = ({ onToast }) => {
       else setDetectedPlatform('Other');
     } catch {
       setDetectedPlatform('');
+    }
+  };
+
+  const fetchTitle = async (targetUrl) => {
+    if (!targetUrl) return;
+    try {
+      new URL(targetUrl);
+      setLoadingTitle(true);
+      const data = await parseQuestionTitle(targetUrl);
+      if (data.title) {
+        setTitle(data.title);
+      }
+      if (data.platform) {
+        setPlatform(data.platform);
+      }
+    } catch (err) {
+      // Ignore
+    } finally {
+      setLoadingTitle(false);
     }
   };
 
@@ -100,6 +120,7 @@ const SubmitPage = ({ onToast }) => {
               placeholder="https://leetcode.com/problems/two-sum/"
               value={url}
               onChange={(e) => handleUrlChange(e.target.value)}
+              onBlur={(e) => fetchTitle(e.target.value)}
               required
             />
             {detectedPlatform && platform === 'Auto-Detect' && (
@@ -112,7 +133,7 @@ const SubmitPage = ({ onToast }) => {
           <div className="form-group">
             <label className="form-label">
               <Type size={12} style={{ display: 'inline', verticalAlign: -1, marginRight: 4 }} />
-              Problem Title
+              Problem Title {loadingTitle && <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginLeft: 8 }}>(fetching...)</span>}
             </label>
             <input
               className="input"
@@ -121,6 +142,7 @@ const SubmitPage = ({ onToast }) => {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               required
+              disabled={loadingTitle}
             />
           </div>
 

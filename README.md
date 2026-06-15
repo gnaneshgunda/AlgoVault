@@ -52,24 +52,45 @@ User ratings are dynamically computed using a combination of algorithm curation 
 
 ## Setup & Execution
 
-### 1. Database Setup (Optional but recommended)
+### 1. Environment Configuration
+
+Both backend and frontend services can be configured using environment variables. Example configuration files (`.env.example`) are provided in their respective directories.
+
+#### Backend Configuration
+Create a `.env` file in the **project root directory** (same folder as `README.md`):
+```env
+# Database connection URL (SQLite is used by default)
+DATABASE_URL=sqlite+aiosqlite:///./test.db
+
+# Secret key used for signing JWT auth tokens
+SECRET_KEY=algovault-dev-secret-key-change-in-production-2024
+```
+
+#### Frontend Configuration
+Create a `.env` file in the **`frontend/` directory**:
+```env
+# Base URL for the backend API
+REACT_APP_API_BASE_URL=http://localhost:8000
+```
+
+### 2. Database Setup (Optional but recommended)
 By default, the API will use an async local SQLite database (`test.db`) for zero-configuration testing.
 
 If you want to use the full PostgreSQL database:
 1. Ensure Docker is installed.
 2. Run the database via Docker Compose:
    `docker-compose up -d`
-3. Create a `.env` file in the root directory and add the PostgreSQL URL:
+3. Update `DATABASE_URL` in your root `.env` file to:
    `DATABASE_URL=postgresql+asyncpg://postgres:password@localhost:5432/cpcuration`
 
-### 2. Run the Backend (FastAPI)
+### 3. Run the Backend (FastAPI)
 1. Install Python dependencies:
    `pip install -r requirements.txt`
 2. Run the FastAPI server:
    `uvicorn app.main:app --reload --port 8000`
    The backend will be available at `http://localhost:8000`. You can view the interactive Swagger docs at `http://localhost:8000/docs`.
 
-### 3. Run the Frontend (React)
+### 4. Run the Frontend (React)
 1. Open a new terminal.
 2. Navigate to the frontend directory:
    `cd frontend`

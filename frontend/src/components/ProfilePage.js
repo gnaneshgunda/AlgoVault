@@ -147,11 +147,11 @@ const ProfilePage = ({ onToast }) => {
 
         <div className="grid-2">
           {[
-            { key: 'codeforces_rating', handleKey: 'cf_handle', label: 'Codeforces', color: '#3b82f6', handlePlaceholder: 'Codeforces Handle' },
-            { key: 'leetcode_solved', handleKey: 'lc_handle', label: 'LeetCode', color: '#f97316', handlePlaceholder: 'LeetCode Username' },
-            { key: 'atcoder_rating', handleKey: 'ac_handle', label: 'AtCoder', color: '#22c55e', handlePlaceholder: 'AtCoder Handle' },
-            { key: 'cses_solved', handleKey: 'cses_handle', label: 'CSES', color: '#a855f7', handlePlaceholder: 'CSES Username' },
-          ].map(({ key, handleKey, label, color, handlePlaceholder }) => (
+            { key: 'codeforces_rating', handleKey: 'cf_handle', label: 'Codeforces', color: '#3b82f6', handlePlaceholder: 'Codeforces Handle', unit: 'Rating' },
+            { key: 'leetcode_solved', handleKey: 'lc_handle', label: 'LeetCode', color: '#f97316', handlePlaceholder: 'LeetCode Username', unit: 'Solved' },
+            { key: 'atcoder_rating', handleKey: 'ac_handle', label: 'AtCoder', color: '#22c55e', handlePlaceholder: 'AtCoder Handle', unit: 'Rating' },
+            { key: 'cses_solved', handleKey: 'cses_handle', label: 'CSES', color: '#a855f7', handlePlaceholder: 'CSES User ID (Numeric)', unit: 'Submissions' },
+          ].map(({ key, handleKey, label, color, handlePlaceholder, unit }) => (
             <div key={key} className="stat-card">
               {editing ? (
                 <input
@@ -164,7 +164,12 @@ const ProfilePage = ({ onToast }) => {
                 />
               ) : (
                 <>
-                  <div className="stat-value" style={{ color }}>{profile[key]}</div>
+                  <div className="stat-value" style={{ color }}>
+                    {profile[key]}
+                    <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginLeft: 6, fontWeight: 500 }}>
+                      {unit}
+                    </span>
+                  </div>
                   <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 4 }}>
                     {profile[handleKey] ? `@${profile[handleKey]}` : 'No Handle Set'}
                   </div>

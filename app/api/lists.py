@@ -98,6 +98,20 @@ async def get_my_lists(
     return responses
 
 
+@router.get("/containing-question/{question_id}", response_model=list[UUID])
+async def get_lists_containing_question(
+    question_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    result = await db.execute(
+        select(ListQuestion.list_id)
+        .join(List, ListQuestion.list_id == List.id)
+        .filter(List.user_id == current_user.id, ListQuestion.question_id == question_id)
+    )
+    return [row for row, in result.all()]
+
+
 @router.get("/public", response_model=list[ListResponse])
 async def get_public_lists(
     skip: int = 0,

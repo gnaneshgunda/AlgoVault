@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ThumbsUp, Bookmark, ExternalLink, Eye, TrendingUp, Award } from 'lucide-react';
-import { createInteraction, registerQuestionView } from '../api';
+import { createInteraction, deleteInteraction, registerQuestionView } from '../api';
 import AddToListModal from './AddToListModal';
 
 const PLATFORM_CLASS = {
@@ -18,25 +18,36 @@ const QuestionCard = ({ question, isLoggedIn, onToast, style }) => {
   const [showListModal, setShowListModal] = useState(false);
 
   const handleUpvote = async () => {
-    if (upvoted || !isLoggedIn) {
-      if (!isLoggedIn) onToast?.('Please login to upvote', 'error');
+    if (!isLoggedIn) {
+      onToast?.('Please login to upvote', 'error');
       return;
     }
-    try {
-      await createInteraction({
-        question_id: question.id,
-        interaction_type: 'Upvote'
-      });
-      setUpvoted(true);
-      setAnimateUpvote(true);
-      setTimeout(() => setAnimateUpvote(false), 400);
-      onToast?.('Upvoted!', 'success');
-    } catch (e) {
-      const msg = e.response?.data?.detail || 'Failed to upvote';
-      if (msg === 'Interaction already exists') {
-        setUpvoted(true);
+
+    if (upvoted) {
+      try {
+        await deleteInteraction(question.id, 'Upvote');
+        setUpvoted(false);
+        onToast?.('Upvote removed', 'success');
+      } catch (e) {
+        onToast?.(e.response?.data?.detail || 'Failed to remove upvote', 'error');
       }
-      onToast?.(msg, 'error');
+    } else {
+      try {
+        await createInteraction({
+          question_id: question.id,
+          interaction_type: 'Upvote'
+        });
+        setUpvoted(true);
+        setAnimateUpvote(true);
+        setTimeout(() => setAnimateUpvote(false), 400);
+        onToast?.('Upvoted!', 'success');
+      } catch (e) {
+        const msg = e.response?.data?.detail || 'Failed to upvote';
+        if (msg === 'Interaction already exists') {
+          setUpvoted(true);
+        }
+        onToast?.(msg, 'error');
+      }
     }
   };
 
@@ -46,11 +57,16 @@ const QuestionCard = ({ question, isLoggedIn, onToast, style }) => {
       return;
     }
 
-    // Always show modal to pick a list, even if they already saved it
-    setShowListModal(true);
-
-    // If not already saved, register the Save interaction too
-    if (!saved) {
+    if (saved) {
+      try {
+        await deleteInteraction(question.id, 'Save');
+        setSaved(false);
+        onToast?.('Removed from saved questions and lists', 'success');
+      } catch (e) {
+        onToast?.(e.response?.data?.detail || 'Failed to unsave question', 'error');
+      }
+    } else {
+      setShowListModal(true);
       try {
         await createInteraction({
           question_id: question.id,
@@ -60,7 +76,6 @@ const QuestionCard = ({ question, isLoggedIn, onToast, style }) => {
         setAnimateSave(true);
         setTimeout(() => setAnimateSave(false), 400);
       } catch (e) {
-        // Ignore interaction already exists error silently here since primary action is adding to list
         if (e.response?.data?.detail === 'Interaction already exists') {
            setSaved(true);
         }
