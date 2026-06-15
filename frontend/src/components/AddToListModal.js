@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { getMyLists, createList, addQuestionToList, getListsContainingQuestion, removeQuestionFromList } from '../api';
 import { Plus, X, List as ListIcon } from 'lucide-react';
 
@@ -13,7 +13,7 @@ const AddToListModal = ({ questionId, onClose, onToast }) => {
   const [newDesc, setNewDesc] = useState('');
   const [isCreating, setIsCreating] = useState(false);
 
-  const fetchLists = async () => {
+  const fetchLists = useCallback(async () => {
     setLoading(true);
     try {
       const [allLists, activeListIds] = await Promise.all([
@@ -27,11 +27,11 @@ const AddToListModal = ({ questionId, onClose, onToast }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [questionId]);
 
   useEffect(() => {
     fetchLists();
-  }, [questionId]);
+  }, [fetchLists]);
 
   const handleToggleList = async (listId) => {
     const isSelected = selectedListIds.includes(listId);
