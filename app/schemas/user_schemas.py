@@ -25,6 +25,11 @@ class UserStatsUpdate(BaseModel):
     lc_handle: Optional[str] = None
     ac_handle: Optional[str] = None
     cses_handle: Optional[str] = None
+    # Raw stats fetched client-side
+    codeforces_rating: Optional[int] = None
+    leetcode_solved: Optional[int] = None
+    atcoder_rating: Optional[int] = None
+    cses_solved: Optional[int] = None
 
 class UserResponse(UserBase):
     id: UUID

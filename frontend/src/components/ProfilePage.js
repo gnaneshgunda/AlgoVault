@@ -4,6 +4,60 @@ import RankBadge from './RankBadge';
 import { TIER_COLORS } from './RankBadge';
 import { Code, Award, Edit3, Check, X } from 'lucide-react';
 
+// Fetch stats browser-side to avoid cloud IP blocks on external APIs
+async function fetchCodeforcesRating(handle) {
+  if (!handle) return 0;
+  try {
+    const res = await fetch(`https://codeforces.com/api/user.info?handles=${handle.replace('@', '')}`);
+    const data = await res.json();
+    if (data.status === 'OK') return data.result[0]?.rating || 0;
+  } catch {}
+  return 0;
+}
+
+async function fetchLeetcodeSolved(handle) {
+  if (!handle) return 0;
+  try {
+    const query = `query{matchedUser(username:"${handle.replace('@', '')}"){submitStats{acSubmissionNum{difficulty count}}}}`;
+    const res = await fetch('https://leetcode.com/graphql', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query }),
+    });
+    const data = await res.json();
+    const stats = data?.data?.matchedUser?.submitStats?.acSubmissionNum || [];
+    return stats.find(s => s.difficulty === 'All')?.count || 0;
+  } catch {}
+  return 0;
+}
+
+async function fetchAtcoderRating(handle) {
+  if (!handle) return 0;
+  try {
+    // Use atcoder-api proxy since atcoder.jp blocks CORS
+    const res = await fetch(`https://atcoder-api.appspot.com/users/${handle.replace('@', '')}`);
+    if (res.ok) {
+      const data = await res.json();
+      return data.rating || 0;
+    }
+  } catch {}
+  return 0;
+}
+
+async function fetchCsesSolved(handle) {
+  if (!handle) return 0;
+  try {
+    // CSES blocks CORS — use backend as proxy
+    const base = process.env.REACT_APP_API_BASE_URL || 'http://127.0.0.1:8000';
+    const res = await fetch(`${base}/users/cses-proxy?user_id=${handle.replace('@', '')}`);
+    if (res.ok) {
+      const data = await res.json();
+      return data.solved || 0;
+    }
+  } catch {}
+  return 0;
+}
+
 const ProfilePage = ({ onToast }) => {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -37,10 +91,22 @@ const ProfilePage = ({ onToast }) => {
 
   const handleSaveStats = async () => {
     try {
-      await updateMyStats(stats);
+      onToast?.('Fetching stats...', 'info');
+      const [cf, lc, ac, cses] = await Promise.all([
+        fetchCodeforcesRating(stats.cf_handle),
+        fetchLeetcodeSolved(stats.lc_handle),
+        fetchAtcoderRating(stats.ac_handle),
+        fetchCsesSolved(stats.cses_handle),
+      ]);
+      await updateMyStats({
+        ...stats,
+        codeforces_rating: cf,
+        leetcode_solved: lc,
+        atcoder_rating: ac,
+        cses_solved: cses,
+      });
       onToast?.('Stats updated! Rank recalculating...', 'success');
       setEditing(false);
-      // Wait for background task to recalculate
       setTimeout(fetchProfile, 1000);
     } catch (e) {
       onToast?.('Failed to update stats', 'error');

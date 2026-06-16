@@ -8,6 +8,7 @@ from app.tasks import background_update_user_rank, background_sync_ratings
 from app.api.auth import get_current_user
 from uuid import UUID
 from datetime import datetime, timezone
+import httpx, re
 
 router = APIRouter(
     prefix="/users",
@@ -34,6 +35,23 @@ def _build_user_response(user):
         tier_color=TIER_COLORS.get(user.rank_tier, '#808080'),
         created_at=user.created_at,
     )
+
+
+@router.get("/cses-proxy")
+async def cses_proxy(user_id: str):
+    """Proxy for CSES which blocks browser CORS requests."""
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.get(
+                f"https://cses.fi/user/{user_id}",
+                headers={'User-Agent': 'Mozilla/5.0'},
+            )
+            if resp.status_code == 200:
+                m = re.search(r'Submission count:</td><td\s*>\s*(\d+)', resp.text)
+                return {"solved": int(m.group(1)) if m else 0}
+    except Exception:
+        pass
+    return {"solved": 0}
 
 
 @router.get("/me", response_model=UserProfileResponse)
@@ -96,20 +114,22 @@ async def update_my_stats(
 ):
     update_data = stats_in.model_dump(exclude_unset=True)
 
-    handles_changed = False
+    raw_stats_provided = any(
+        k in update_data for k in ['codeforces_rating', 'leetcode_solved', 'atcoder_rating', 'cses_solved']
+    )
+
     for key, value in update_data.items():
-        if getattr(current_user, key) != value:
-            setattr(current_user, key, value)
-            if key in ['cf_handle', 'lc_handle', 'ac_handle', 'cses_handle']:
-                handles_changed = True
+        setattr(current_user, key, value)
 
     await db.commit()
     await db.refresh(current_user)
 
-    if handles_changed:
-        background_tasks.add_task(background_sync_ratings, current_user.id)
-    else:
+    if raw_stats_provided:
+        # Stats already synced client-side, just recalculate rank
         background_tasks.add_task(background_update_user_rank, current_user.id)
+    else:
+        # Only handles changed, trigger server-side sync (local dev / fallback)
+        background_tasks.add_task(background_sync_ratings, current_user.id)
 
     return _build_user_response(current_user)
 
