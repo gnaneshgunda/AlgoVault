@@ -80,6 +80,7 @@ const ProfilePage = ({ onToast }) => {
         ac_handle: data.ac_handle || '',
         cses_handle: data.cses_handle || '',
       });
+      return data;
     } catch (e) {
       console.error(e);
     } finally {
@@ -87,7 +88,45 @@ const ProfilePage = ({ onToast }) => {
     }
   };
 
-  useEffect(() => { fetchProfile(); }, []);
+  const silentSyncStats = async (data) => {
+    if (!data.cf_handle && !data.lc_handle && !data.ac_handle && !data.cses_handle) return;
+    try {
+      const [cf, lc, ac, cses] = await Promise.all([
+        fetchCodeforcesRating(data.cf_handle),
+        fetchLeetcodeSolved(data.lc_handle),
+        fetchAtcoderRating(data.ac_handle),
+        fetchCsesSolved(data.cses_handle),
+      ]);
+      const updated = await updateMyStats({
+        cf_handle: data.cf_handle,
+        lc_handle: data.lc_handle,
+        ac_handle: data.ac_handle,
+        cses_handle: data.cses_handle,
+        codeforces_rating: cf,
+        leetcode_solved: lc,
+        atcoder_rating: ac,
+        cses_solved: cses,
+      });
+      // Update profile stats in-place without a full reload
+      setProfile(prev => ({
+        ...prev,
+        codeforces_rating: updated.codeforces_rating,
+        leetcode_solved: updated.leetcode_solved,
+        atcoder_rating: updated.atcoder_rating,
+        cses_solved: updated.cses_solved,
+        solving_score: updated.solving_score,
+        total_rating: updated.total_rating,
+        rank_tier: updated.rank_tier,
+        tier_color: updated.tier_color,
+      }));
+    } catch (e) {
+      console.error('Silent sync failed', e);
+    }
+  };
+
+  useEffect(() => {
+    fetchProfile().then(data => { if (data) silentSyncStats(data); });
+  }, []);
 
   const handleSaveStats = async () => {
     try {
