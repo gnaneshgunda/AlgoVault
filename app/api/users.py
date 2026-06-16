@@ -5,6 +5,10 @@ from app.db.database import get_db
 from app.models.models import User, Question, Interaction, List
 from app.schemas.user_schemas import UserResponse, UserStatsUpdate, UserProfileResponse, TIER_COLORS
 from app.tasks import background_update_user_rank, background_sync_ratings
+from app.api.auth import get_current_user
+from uuid import UUID
+from datetime import datetime, timezone
+import httpx, re
 
 router = APIRouter(
     prefix="/users",
