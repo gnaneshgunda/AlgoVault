@@ -5,10 +5,6 @@ from app.db.database import get_db
 from app.models.models import User, Question, Interaction, List
 from app.schemas.user_schemas import UserResponse, UserStatsUpdate, UserProfileResponse, TIER_COLORS
 from app.tasks import background_update_user_rank, background_sync_ratings
-from app.api.auth import get_current_user
-from uuid import UUID
-from datetime import datetime, timezone
-import httpx, re
 
 router = APIRouter(
     prefix="/users",
@@ -56,19 +52,9 @@ async def cses_proxy(user_id: str):
 
 @router.get("/me", response_model=UserProfileResponse)
 async def get_me(
-    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    if not current_user.last_rating_update:
-        background_tasks.add_task(background_sync_ratings, current_user.id)
-    else:
-        last_update = current_user.last_rating_update
-        if last_update.tzinfo is None:
-            last_update = last_update.replace(tzinfo=timezone.utc)
-        if (datetime.now(timezone.utc) - last_update).total_seconds() > 86400:
-            background_tasks.add_task(background_sync_ratings, current_user.id)
-
     q_count = await db.execute(
         select(func.count()).select_from(Question).filter(Question.submitter_id == current_user.id)
     )
