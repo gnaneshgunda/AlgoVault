@@ -5,6 +5,8 @@ import { TIER_COLORS } from './RankBadge';
 import { Code, Award, Edit3, Check, X } from 'lucide-react';
 
 // Fetch stats browser-side to avoid cloud IP blocks on external APIs
+const API_BASE = process.env.REACT_APP_API_BASE_URL || 'http://127.0.0.1:8000';
+
 async function fetchCodeforcesRating(handle) {
   if (!handle) return 0;
   try {
@@ -18,15 +20,8 @@ async function fetchCodeforcesRating(handle) {
 async function fetchLeetcodeSolved(handle) {
   if (!handle) return 0;
   try {
-    const query = `query{matchedUser(username:"${handle.replace('@', '')}"){submitStats{acSubmissionNum{difficulty count}}}}`;
-    const res = await fetch('https://leetcode.com/graphql', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query }),
-    });
-    const data = await res.json();
-    const stats = data?.data?.matchedUser?.submitStats?.acSubmissionNum || [];
-    return stats.find(s => s.difficulty === 'All')?.count || 0;
+    const res = await fetch(`${API_BASE}/users/leetcode-proxy?handle=${handle.replace('@', '')}`);
+    if (res.ok) return (await res.json()).solved || 0;
   } catch {}
   return 0;
 }
@@ -34,12 +29,8 @@ async function fetchLeetcodeSolved(handle) {
 async function fetchAtcoderRating(handle) {
   if (!handle) return 0;
   try {
-    // Use atcoder-api proxy since atcoder.jp blocks CORS
-    const res = await fetch(`https://atcoder-api.appspot.com/users/${handle.replace('@', '')}`);
-    if (res.ok) {
-      const data = await res.json();
-      return data.rating || 0;
-    }
+    const res = await fetch(`${API_BASE}/users/atcoder-proxy?handle=${handle.replace('@', '')}`);
+    if (res.ok) return (await res.json()).rating || 0;
   } catch {}
   return 0;
 }
@@ -47,13 +38,8 @@ async function fetchAtcoderRating(handle) {
 async function fetchCsesSolved(handle) {
   if (!handle) return 0;
   try {
-    // CSES blocks CORS — use backend as proxy
-    const base = process.env.REACT_APP_API_BASE_URL || 'http://127.0.0.1:8000';
-    const res = await fetch(`${base}/users/cses-proxy?user_id=${handle.replace('@', '')}`);
-    if (res.ok) {
-      const data = await res.json();
-      return data.solved || 0;
-    }
+    const res = await fetch(`${API_BASE}/users/cses-proxy?user_id=${handle.replace('@', '')}`);
+    if (res.ok) return (await res.json()).solved || 0;
   } catch {}
   return 0;
 }

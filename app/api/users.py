@@ -39,7 +39,6 @@ def _build_user_response(user):
 
 @router.get("/cses-proxy")
 async def cses_proxy(user_id: str):
-    """Proxy for CSES which blocks browser CORS requests."""
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
             resp = await client.get(
@@ -52,6 +51,48 @@ async def cses_proxy(user_id: str):
     except Exception:
         pass
     return {"solved": 0}
+
+
+@router.get("/leetcode-proxy")
+async def leetcode_proxy(handle: str):
+    try:
+        query = '{matchedUser(username:"%s"){submitStats{acSubmissionNum{difficulty count}}}}' % handle.lstrip('@').strip()
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.post(
+                "https://leetcode.com/graphql",
+                json={"query": query},
+                headers={
+                    'User-Agent': 'Mozilla/5.0',
+                    'Content-Type': 'application/json',
+                    'Referer': 'https://leetcode.com',
+                },
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                stats = data.get("data", {}).get("matchedUser", {}) or {}
+                for s in (stats.get("submitStats") or {}).get("acSubmissionNum", []):
+                    if s["difficulty"] == "All":
+                        return {"solved": s["count"]}
+    except Exception:
+        pass
+    return {"solved": 0}
+
+
+@router.get("/atcoder-proxy")
+async def atcoder_proxy(handle: str):
+    try:
+        h = handle.lstrip('@').strip()
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.get(
+                f"https://atcoder.jp/users/{h}",
+                headers={'User-Agent': 'Mozilla/5.0'},
+            )
+            if resp.status_code == 200:
+                m = re.search(r'Rating</th>\s*<td>[^<]*<span[^>]*>(\d+)</span>', resp.text)
+                return {"rating": int(m.group(1)) if m else 0}
+    except Exception:
+        pass
+    return {"rating": 0}
 
 
 @router.get("/me", response_model=UserProfileResponse)
