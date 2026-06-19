@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { ThumbsUp, Bookmark, ExternalLink, Eye, TrendingUp, Award, Tag, CheckSquare, Square, X, Check } from 'lucide-react';
+import ReactDOM from 'react-dom';
+import { ThumbsUp, Bookmark, ExternalLink, Eye, TrendingUp, Award, Tag, X, Check } from 'lucide-react';
 import { createInteraction, deleteInteraction, registerQuestionView, updateQuestionTags } from '../api';
 import AddToListModal from './AddToListModal';
 
@@ -52,7 +53,6 @@ const TagChip = ({ label, color }) => (
   }}>{label}</span>
 );
 
-// Mini tag picker used inside the edit modal
 const TagPicker = ({ label, options, selected, onChange }) => (
   <div style={{ marginBottom: 12 }}>
     <div className="form-label" style={{ marginBottom: 6 }}>{label}</div>
@@ -74,15 +74,53 @@ const TagPicker = ({ label, options, selected, onChange }) => (
   </div>
 );
 
+// Rendered via portal so it always sits above everything
+const TagEditorModal = ({ editTopics, setEditTopics, editTechniques, setEditTechniques, editDifficulty, setEditDifficulty, onSave, onClose, saving }) =>
+  ReactDOM.createPortal(
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" style={{ maxWidth: 560, maxHeight: '80vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <h2 className="modal-title" style={{ margin: 0 }}>Edit Tags</h2>
+          <button className="btn btn-ghost btn-icon" onClick={onClose}><X size={18} /></button>
+        </div>
+
+        <div style={{ marginBottom: 12 }}>
+          <div className="form-label" style={{ marginBottom: 6 }}>Difficulty</div>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {DIFFICULTIES.map(d => (
+              <button key={d} onClick={() => setEditDifficulty(p => p === d ? '' : d)}
+                style={{
+                  padding: '4px 14px', borderRadius: 100, fontSize: '0.8rem', fontWeight: 600,
+                  cursor: 'pointer', fontFamily: 'Inter, sans-serif',
+                  border: `1px solid ${editDifficulty === d ? DIFF_COLORS[d] : 'var(--border-light)'}`,
+                  background: editDifficulty === d ? `${DIFF_COLORS[d]}20` : 'transparent',
+                  color: editDifficulty === d ? DIFF_COLORS[d] : 'var(--text-muted)',
+                }}>{d}</button>
+            ))}
+          </div>
+        </div>
+
+        <TagPicker label="Topic" options={TOPIC_TAGS} selected={editTopics} onChange={setEditTopics} />
+        <TagPicker label="Technique" options={TECHNIQUE_TAGS} selected={editTechniques} onChange={setEditTechniques} />
+
+        <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+          <button className="btn btn-primary" onClick={onSave} disabled={saving}>
+            <Check size={14} /> {saving ? 'Saving...' : 'Save Tags'}
+          </button>
+          <button className="btn btn-ghost" onClick={onClose}><X size={14} /> Cancel</button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+
 const QuestionCard = ({ question, isLoggedIn, currentUserId, onToast, style }) => {
   const [upvoted, setUpvoted] = useState(question.has_upvoted || false);
   const [saved, setSaved] = useState(question.has_saved || false);
   const [animateUpvote, setAnimateUpvote] = useState(false);
   const [animateSave, setAnimateSave] = useState(false);
   const [showListModal, setShowListModal] = useState(false);
-  const [solved, setSolved] = useState(false);
 
-  // Tag editing (submitter only)
   const [showTagEditor, setShowTagEditor] = useState(false);
   const [editTopics, setEditTopics] = useState(question.topic_tags || []);
   const [editTechniques, setEditTechniques] = useState(question.technique_tags || []);
@@ -92,7 +130,8 @@ const QuestionCard = ({ question, isLoggedIn, currentUserId, onToast, style }) =
   const [displayDifficulty, setDisplayDifficulty] = useState(question.difficulty || '');
   const [savingTags, setSavingTags] = useState(false);
 
-  const isSubmitter = isLoggedIn && currentUserId && question.submitter_id === currentUserId;
+  // Tags button visible only to the question submitter
+  const isSubmitter = isLoggedIn && currentUserId && String(question.submitter_id) === String(currentUserId);
 
   const handleUpvote = async () => {
     if (!isLoggedIn) { onToast?.('Please login to upvote', 'error'); return; }
@@ -143,24 +182,13 @@ const QuestionCard = ({ question, isLoggedIn, currentUserId, onToast, style }) =
     } finally { setSavingTags(false); }
   };
 
-  const allTags = [...displayTopics, ...displayTechniques];
   const platformClass = PLATFORM_CLASS[question.platform] || 'other';
 
   return (
     <div className="question-card" style={style}>
       <div className="question-card-header">
         <div style={{ flex: 1 }}>
-          {/* Title row with solved checkbox */}
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-            {isLoggedIn && (
-              <button onClick={() => setSolved(s => !s)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 0', flexShrink: 0, color: solved ? '#10b981' : 'var(--text-muted)' }}>
-                {solved ? <CheckSquare size={18} /> : <Square size={18} />}
-              </button>
-            )}
-            <div className="question-title" style={{ textDecoration: solved ? 'line-through' : 'none', color: solved ? 'var(--text-muted)' : undefined }}>
-              {question.title}
-            </div>
-          </div>
+          <div className="question-title">{question.title}</div>
 
           <div className="question-meta">
             <span className={`platform-badge ${platformClass}`}>{question.platform}</span>
@@ -176,8 +204,7 @@ const QuestionCard = ({ question, isLoggedIn, currentUserId, onToast, style }) =
             <span className="meta-item">{timeAgo(question.created_at)}</span>
           </div>
 
-          {/* Tags row */}
-          {allTags.length > 0 && (
+          {(displayTopics.length > 0 || displayTechniques.length > 0) && (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 8 }}>
               {displayTopics.map(t => <TagChip key={t} label={t} color="var(--accent-primary)" />)}
               {displayTechniques.map(t => <TagChip key={t} label={t} color="var(--accent-secondary)" />)}
@@ -206,43 +233,14 @@ const QuestionCard = ({ question, isLoggedIn, currentUserId, onToast, style }) =
         )}
       </div>
 
-      {/* Tag editor modal */}
       {showTagEditor && (
-        <div className="modal-overlay" onClick={() => setShowTagEditor(false)}>
-          <div className="modal" style={{ maxWidth: 560, maxHeight: '80vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <h2 className="modal-title" style={{ margin: 0 }}>Edit Tags</h2>
-              <button className="btn btn-ghost btn-icon" onClick={() => setShowTagEditor(false)}><X size={18} /></button>
-            </div>
-
-            {/* Difficulty */}
-            <div style={{ marginBottom: 12 }}>
-              <div className="form-label" style={{ marginBottom: 6 }}>Difficulty</div>
-              <div style={{ display: 'flex', gap: 6 }}>
-                {DIFFICULTIES.map(d => (
-                  <button key={d} onClick={() => setEditDifficulty(p => p === d ? '' : d)}
-                    style={{
-                      padding: '4px 14px', borderRadius: 100, fontSize: '0.8rem', fontWeight: 600,
-                      cursor: 'pointer', fontFamily: 'Inter, sans-serif',
-                      border: `1px solid ${editDifficulty === d ? DIFF_COLORS[d] : 'var(--border-light)'}`,
-                      background: editDifficulty === d ? `${DIFF_COLORS[d]}20` : 'transparent',
-                      color: editDifficulty === d ? DIFF_COLORS[d] : 'var(--text-muted)',
-                    }}>{d}</button>
-                ))}
-              </div>
-            </div>
-
-            <TagPicker label="Topic" options={TOPIC_TAGS} selected={editTopics} onChange={setEditTopics} />
-            <TagPicker label="Technique" options={TECHNIQUE_TAGS} selected={editTechniques} onChange={setEditTechniques} />
-
-            <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
-              <button className="btn btn-primary" onClick={handleSaveTags} disabled={savingTags}>
-                <Check size={14} /> {savingTags ? 'Saving...' : 'Save Tags'}
-              </button>
-              <button className="btn btn-ghost" onClick={() => setShowTagEditor(false)}><X size={14} /> Cancel</button>
-            </div>
-          </div>
-        </div>
+        <TagEditorModal
+          editTopics={editTopics} setEditTopics={setEditTopics}
+          editTechniques={editTechniques} setEditTechniques={setEditTechniques}
+          editDifficulty={editDifficulty} setEditDifficulty={setEditDifficulty}
+          onSave={handleSaveTags} onClose={() => setShowTagEditor(false)}
+          saving={savingTags}
+        />
       )}
 
       {showListModal && (
