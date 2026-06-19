@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import ReactDOM from 'react-dom';
-import { ThumbsUp, Bookmark, ExternalLink, Eye, TrendingUp, Award, Tag, X, Check } from 'lucide-react';
-import { createInteraction, deleteInteraction, registerQuestionView, updateQuestionTags } from '../api';
+import { ThumbsUp, Bookmark, ExternalLink, Eye, TrendingUp, Award, Tag, X, Check, CheckSquare, Square } from 'lucide-react';
+import { createInteraction, deleteInteraction, registerQuestionView, updateQuestionTags, toggleSolved } from '../api';
 import AddToListModal from './AddToListModal';
 
 const PLATFORM_CLASS = {
@@ -120,6 +120,19 @@ const QuestionCard = ({ question, isLoggedIn, currentUserId, onToast, style }) =
   const [animateUpvote, setAnimateUpvote] = useState(false);
   const [animateSave, setAnimateSave] = useState(false);
   const [showListModal, setShowListModal] = useState(false);
+  const [solved, setSolved] = useState(question.has_solved || false);
+
+  const handleToggleSolved = async () => {
+    if (!isLoggedIn) { onToast?.('Please login to mark as solved', 'error'); return; }
+    const next = !solved;
+    setSolved(next); // optimistic
+    try {
+      await toggleSolved(question.id);
+    } catch (e) {
+      setSolved(!next); // revert
+      onToast?.('Failed to update solved status', 'error');
+    }
+  };
 
   const [showTagEditor, setShowTagEditor] = useState(false);
   const [editTopics, setEditTopics] = useState(question.topic_tags || []);
@@ -188,7 +201,7 @@ const QuestionCard = ({ question, isLoggedIn, currentUserId, onToast, style }) =
     <div className="question-card" style={style}>
       <div className="question-card-header">
         <div style={{ flex: 1 }}>
-          <div className="question-title">{question.title}</div>
+          <div className="question-title" style={{ textDecoration: solved ? 'line-through' : 'none', color: solved ? 'var(--text-muted)' : undefined }}>{question.title}</div>
 
           <div className="question-meta">
             <span className={`platform-badge ${platformClass}`}>{question.platform}</span>
@@ -220,6 +233,9 @@ const QuestionCard = ({ question, isLoggedIn, currentUserId, onToast, style }) =
       </div>
 
       <div className="question-actions">
+        <button className={`action-btn ${solved ? 'active-save' : ''}`} onClick={handleToggleSolved} style={{ color: solved ? '#10b981' : undefined, borderColor: solved ? 'rgba(16,185,129,0.4)' : undefined }}>
+          {solved ? <CheckSquare size={14} /> : <Square size={14} />} {solved ? 'Solved' : 'Mark Solved'}
+        </button>
         <button className={`action-btn ${upvoted ? 'active-upvote' : ''} ${animateUpvote ? 'pulse-once' : ''}`} onClick={handleUpvote}>
           <ThumbsUp size={14} /> {upvoted ? 'Upvoted' : 'Upvote'}
         </button>

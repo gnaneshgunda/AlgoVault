@@ -58,6 +58,7 @@ class QuestionResponse(QuestionBase):
     submitter_username: Optional[str] = None
     has_upvoted: bool = False
     has_saved: bool = False
+    has_solved: bool = False
     topic_tags: Optional[List[str]] = None
     technique_tags: Optional[List[str]] = None
     difficulty: Optional[str] = None

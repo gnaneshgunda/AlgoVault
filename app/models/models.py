@@ -78,6 +78,13 @@ class Question(Base):
     list_questions = relationship("ListQuestion", back_populates="question")
     interactions = relationship("Interaction", back_populates="question")
 
+class SolvedQuestion(Base):
+    __tablename__ = "solved_questions"
+
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), primary_key=True)
+    question_id = Column(UUID(as_uuid=True), ForeignKey("questions.id"), primary_key=True)
+    solved_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+
 class List(Base):
     __tablename__ = "lists"
 

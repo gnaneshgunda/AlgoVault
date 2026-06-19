@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
 from app.db.database import get_db
-from app.models.models import Question, User, Interaction, InteractionType
+from app.models.models import Question, User, Interaction, InteractionType, SolvedQuestion
 from app.schemas.schemas import QuestionResponse
 from typing import List, Optional
 from app.api.auth import get_optional_current_user
@@ -12,6 +12,7 @@ router = APIRouter(prefix="/feed", tags=["feeds"])
 async def _enrich_questions(questions, db, current_user=None):
     responses = []
     user_interactions_map = {}
+    solved_set = set()
     if current_user:
         question_ids = [q.id for q in questions]
         interactions_result = await db.execute(
@@ -24,6 +25,14 @@ async def _enrich_questions(questions, db, current_user=None):
             if interaction.question_id not in user_interactions_map:
                 user_interactions_map[interaction.question_id] = set()
             user_interactions_map[interaction.question_id].add(interaction.interaction_type)
+
+        solved_result = await db.execute(
+            select(SolvedQuestion.question_id).filter(
+                SolvedQuestion.user_id == current_user.id,
+                SolvedQuestion.question_id.in_(question_ids)
+            )
+        )
+        solved_set = {row for row, in solved_result.all()}
 
     for q in questions:
         user_result = await db.execute(select(User.username).filter(User.id == q.submitter_id))
@@ -50,6 +59,7 @@ async def _enrich_questions(questions, db, current_user=None):
             submitter_username=username,
             has_upvoted=has_upvoted,
             has_saved=has_saved,
+            has_solved=q.id in solved_set,
             topic_tags=q.topic_tags,
             technique_tags=q.technique_tags,
             difficulty=q.difficulty,

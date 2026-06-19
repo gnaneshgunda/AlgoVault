@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete
 from app.db.database import get_db
-from app.models.models import Interaction, InteractionType, User, Question, List, ListQuestion
+from app.models.models import Interaction, InteractionType, User, Question, List, ListQuestion, SolvedQuestion
 from app.schemas.interaction_schemas import InteractionCreate, InteractionResponse
 from app.algorithms import WEIGHT_UPVOTE, WEIGHT_SAVE, calculate_wilson_score, calculate_decayed_gravity
 from app.gamification import get_weight_multiplier_for_rank
@@ -114,3 +114,26 @@ async def delete_interaction(
 
     await db.delete(interaction)
     await db.commit()
+
+
+@router.post("/solved/{question_id}", status_code=status.HTTP_200_OK)
+async def toggle_solved(
+    question_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    result = await db.execute(
+        select(SolvedQuestion).filter(
+            SolvedQuestion.user_id == current_user.id,
+            SolvedQuestion.question_id == question_id
+        )
+    )
+    existing = result.scalars().first()
+    if existing:
+        await db.delete(existing)
+        await db.commit()
+        return {"solved": False}
+    else:
+        db.add(SolvedQuestion(user_id=current_user.id, question_id=question_id))
+        await db.commit()
+        return {"solved": True}

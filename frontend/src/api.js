@@ -90,6 +90,11 @@ export const getMyInteractions = async () => {
   return res.data;
 };
 
+export const toggleSolved = async (questionId) => {
+  const res = await api.post(`/interactions/solved/${questionId}`);
+  return res.data;
+};
+
 export const deleteInteraction = async (questionId, interactionType) => {
   const res = await api.delete('/interactions/', {
     params: {

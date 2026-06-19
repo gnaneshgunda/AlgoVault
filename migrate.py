@@ -16,6 +16,14 @@ async def migrate():
         await conn.execute(__import__('sqlalchemy').text(
             "ALTER TABLE questions ADD COLUMN IF NOT EXISTS difficulty VARCHAR"
         ))
+        await conn.execute(__import__('sqlalchemy').text("""
+            CREATE TABLE IF NOT EXISTS solved_questions (
+                user_id UUID NOT NULL REFERENCES users(id),
+                question_id UUID NOT NULL REFERENCES questions(id),
+                solved_at TIMESTAMPTZ DEFAULT now(),
+                PRIMARY KEY (user_id, question_id)
+            )
+        """))
     print("Migration complete.")
 
 asyncio.run(migrate())
