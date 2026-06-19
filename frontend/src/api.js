@@ -40,13 +40,21 @@ export const login = async (data) => {
 };
 
 // --- Feed ---
-export const getTrendingFeed = async (skip = 0, limit = 20) => {
-  const res = await api.get('/feed/trending', { params: { skip, limit } });
+export const getTrendingFeed = async (skip = 0, limit = 20, filters = {}) => {
+  const params = { skip, limit };
+  if (filters.topic_tags?.length) params.topic_tags = filters.topic_tags;
+  if (filters.technique_tags?.length) params.technique_tags = filters.technique_tags;
+  if (filters.difficulty) params.difficulty = filters.difficulty;
+  const res = await api.get('/feed/trending', { params });
   return res.data;
 };
 
-export const getBestFeed = async (skip = 0, limit = 20) => {
-  const res = await api.get('/feed/best', { params: { skip, limit } });
+export const getBestFeed = async (skip = 0, limit = 20, filters = {}) => {
+  const params = { skip, limit };
+  if (filters.topic_tags?.length) params.topic_tags = filters.topic_tags;
+  if (filters.technique_tags?.length) params.technique_tags = filters.technique_tags;
+  if (filters.difficulty) params.difficulty = filters.difficulty;
+  const res = await api.get('/feed/best', { params });
   return res.data;
 };
 
@@ -92,6 +100,11 @@ export const deleteInteraction = async (questionId, interactionType) => {
   return res.data;
 };
 
+export const updateQuestionTags = async (questionId, data) => {
+  const res = await api.patch(`/questions/${questionId}/tags`, data);
+  return res.data;
+};
+
 // --- Lists ---
 export const createList = async (data) => {
   const res = await api.post('/lists/', data);
@@ -125,6 +138,11 @@ export const updateList = async (listId, data) => {
 
 export const addQuestionToList = async (listId, data) => {
   const res = await api.post(`/lists/${listId}/questions`, data);
+  return res.data;
+};
+
+export const updateQuestionStatus = async (listId, questionId) => {
+  const res = await api.patch(`/lists/${listId}/questions/${questionId}/status`);
   return res.data;
 };
 

@@ -3,6 +3,8 @@ from datetime import datetime, timezone
 from sqlalchemy import Column, String, Integer, Float, Boolean, ForeignKey, DateTime, Enum, UniqueConstraint
 from sqlalchemy import UUID
 from sqlalchemy.orm import relationship
+from sqlalchemy.dialects.postgresql import ARRAY as PG_ARRAY
+from sqlalchemy import JSON
 import enum
 
 from app.db.database import Base
@@ -66,6 +68,11 @@ class Question(Base):
 
     trending_score = Column(Float, default=0.0)
     wilson_score = Column(Float, default=0.0)
+
+    # Tags & metadata — nullable, existing rows unaffected
+    topic_tags = Column(JSON, nullable=True)        # e.g. ["Array", "Graph"]
+    technique_tags = Column(JSON, nullable=True)    # e.g. ["Binary Search", "DFS"]
+    difficulty = Column(String, nullable=True)      # "Easy" | "Medium" | "Hard"
 
     submitter = relationship("User", back_populates="submitted_questions")
     list_questions = relationship("ListQuestion", back_populates="question")

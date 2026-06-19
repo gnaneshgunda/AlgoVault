@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getListDetail, removeQuestionFromList, forkList, registerQuestionView, updateList } from '../api';
-import { ArrowLeft, GitFork, Globe, Lock, Trash2, ExternalLink, Edit3, X, Check } from 'lucide-react';
+import { getListDetail, removeQuestionFromList, forkList, registerQuestionView, updateList, updateQuestionStatus } from '../api';
+import { ArrowLeft, GitFork, Globe, Lock, Trash2, ExternalLink, Edit3, X, Check, CheckSquare, Square } from 'lucide-react';
 
 const PLATFORM_CLASS = {
   'Codeforces': 'codeforces',
@@ -69,6 +69,30 @@ const ListView = ({ currentUserId, onToast }) => {
       fetchList();
     } catch (e) {
       onToast?.(e.response?.data?.detail || 'Failed to update list', 'error');
+    }
+  };
+
+  const handleToggleStatus = async (questionId, currentStatus) => {
+    // Optimistic update
+    setListData(prev => ({
+      ...prev,
+      questions: prev.questions.map(q =>
+        q.id === questionId
+          ? { ...q, status: currentStatus === 'Solved' ? 'To Do' : 'Solved' }
+          : q
+      )
+    }));
+    try {
+      await updateQuestionStatus(listId, questionId);
+    } catch (e) {
+      // Revert on failure
+      setListData(prev => ({
+        ...prev,
+        questions: prev.questions.map(q =>
+          q.id === questionId ? { ...q, status: currentStatus } : q
+        )
+      }));
+      onToast?.('Failed to update status', 'error');
     }
   };
 
@@ -191,20 +215,26 @@ const ListView = ({ currentUserId, onToast }) => {
           {listData.questions.map((q, i) => (
             <div key={q.id} className="question-card" style={{ animationDelay: `${i * 0.05}s` }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ flex: 1 }}>
-                  <div className="question-title">{q.title}</div>
-                  <div className="question-meta" style={{ marginTop: 6 }}>
-                    <span className={`platform-badge ${PLATFORM_CLASS[q.platform] || 'other'}`}>
-                      {q.platform}
-                    </span>
-                    <span className="meta-item" style={{
-                      padding: '2px 8px', borderRadius: 4,
-                      background: q.status === 'Solved' ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.05)',
-                      color: q.status === 'Solved' ? '#34d399' : 'var(--text-muted)',
-                      fontSize: '0.75rem', fontWeight: 600
-                    }}>
-                      {q.status}
-                    </span>
+                <div style={{ flex: 1, display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                  {isOwner && (
+                    <button
+                      onClick={() => handleToggleStatus(q.id, q.status)}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 0', flexShrink: 0, color: q.status === 'Solved' ? '#10b981' : 'var(--text-muted)' }}
+                      title={q.status === 'Solved' ? 'Mark as To Do' : 'Mark as Solved'}
+                    >
+                      {q.status === 'Solved' ? <CheckSquare size={18} /> : <Square size={18} />}
+                    </button>
+                  )}
+                  <div>
+                    <div className="question-title" style={{ textDecoration: q.status === 'Solved' ? 'line-through' : 'none', color: q.status === 'Solved' ? 'var(--text-muted)' : undefined }}>
+                      {q.title}
+                    </div>
+                    <div className="question-meta" style={{ marginTop: 6 }}>
+                      <span className={`platform-badge ${PLATFORM_CLASS[q.platform] || 'other'}`}>{q.platform}</span>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 600, color: q.status === 'Solved' ? '#10b981' : 'var(--text-muted)' }}>
+                        {q.status}
+                      </span>
+                    </div>
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>

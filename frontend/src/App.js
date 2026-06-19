@@ -94,7 +94,7 @@ function App() {
 
         <Routes>
           {/* Public routes */}
-          <Route path="/" element={<FeedPage isLoggedIn={!!user} onToast={addToast} />} />
+          <Route path="/" element={<FeedPage isLoggedIn={!!user} currentUserId={user?.id} onToast={addToast} />} />
           <Route path="/login" element={
             user ? <Navigate to="/" replace /> : <LoginPage onLogin={handleLogin} />
           } />

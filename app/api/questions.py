@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.db.database import get_db
 from app.models.models import Question, User
-from app.schemas.schemas import QuestionCreate, QuestionResponse
+from app.schemas.schemas import QuestionCreate, QuestionResponse, QuestionTagsUpdate
 from app.utils import normalize_and_hash_url
 from app.parsers import auto_detect_platform
 from app.tasks import background_update_user_rank
@@ -51,7 +51,10 @@ async def create_question(
         normalized_url_hash=url_hash,
         original_url=question_in.original_url,
         title=question_in.title,
-        platform=platform
+        platform=platform,
+        topic_tags=question_in.topic_tags,
+        technique_tags=question_in.technique_tags,
+        difficulty=question_in.difficulty,
     )
 
     db.add(new_question)
@@ -124,6 +127,49 @@ async def parse_title(url: str):
         pass
 
     return {"title": "New Problem", "platform": platform}
+
+
+@router.patch("/{question_id}/tags", response_model=QuestionResponse)
+async def update_question_tags(
+    question_id: UUID,
+    tags_in: QuestionTagsUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    result = await db.execute(select(Question).filter(Question.id == question_id))
+    question = result.scalars().first()
+    if not question:
+        raise HTTPException(status_code=404, detail="Question not found")
+    if question.submitter_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Only the submitter can update tags")
+
+    if tags_in.topic_tags is not None:
+        question.topic_tags = tags_in.topic_tags
+    if tags_in.technique_tags is not None:
+        question.technique_tags = tags_in.technique_tags
+    if tags_in.difficulty is not None:
+        question.difficulty = tags_in.difficulty
+
+    await db.commit()
+    await db.refresh(question)
+
+    return QuestionResponse(
+        id=question.id,
+        submitter_id=question.submitter_id,
+        original_url=question.original_url,
+        title=question.title,
+        platform=question.platform,
+        normalized_url_hash=question.normalized_url_hash,
+        total_views=question.total_views,
+        total_weighted_score=question.total_weighted_score,
+        trending_score=question.trending_score,
+        wilson_score=question.wilson_score,
+        created_at=question.created_at,
+        submitter_username=current_user.username,
+        topic_tags=question.topic_tags,
+        technique_tags=question.technique_tags,
+        difficulty=question.difficulty,
+    )
 
 
 @router.post("/{question_id}/view")

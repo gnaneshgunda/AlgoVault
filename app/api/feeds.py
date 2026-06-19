@@ -1,19 +1,16 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
 from app.db.database import get_db
 from app.models.models import Question, User, Interaction, InteractionType
 from app.schemas.schemas import QuestionResponse
-from typing import List
+from typing import List, Optional
 from app.api.auth import get_optional_current_user
 
 router = APIRouter(prefix="/feed", tags=["feeds"])
 
 async def _enrich_questions(questions, db, current_user=None):
-    """Add submitter usernames and check if current user has interacted."""
     responses = []
-
-    # Pre-fetch user interactions if logged in
     user_interactions_map = {}
     if current_user:
         question_ids = [q.id for q in questions]
@@ -31,15 +28,12 @@ async def _enrich_questions(questions, db, current_user=None):
     for q in questions:
         user_result = await db.execute(select(User.username).filter(User.id == q.submitter_id))
         username = user_result.scalar_one_or_none() or "Unknown"
-
         has_upvoted = False
         has_saved = False
         if current_user and q.id in user_interactions_map:
             types = user_interactions_map[q.id]
-            if InteractionType.UPVOTE in types:
-                has_upvoted = True
-            if InteractionType.SAVE in types:
-                has_saved = True
+            has_upvoted = InteractionType.UPVOTE in types
+            has_saved = InteractionType.SAVE in types
 
         responses.append(QuestionResponse(
             id=q.id,
@@ -55,23 +49,60 @@ async def _enrich_questions(questions, db, current_user=None):
             created_at=q.created_at,
             submitter_username=username,
             has_upvoted=has_upvoted,
-            has_saved=has_saved
+            has_saved=has_saved,
+            topic_tags=q.topic_tags,
+            technique_tags=q.technique_tags,
+            difficulty=q.difficulty,
         ))
-
     return responses
 
-@router.get("/trending", response_model=List[QuestionResponse])
-async def get_trending_feed(skip: int = 0, limit: int = 20, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_optional_current_user)):
+
+def _apply_tag_filters(stmt, topic_tags, technique_tags, difficulty):
+    """Filter in Python after fetch since SQLite JSON support is limited."""
+    return stmt  # filtering done post-fetch below
+
+
+async def _fetch_filtered(db, order_col, skip, limit, topic_tags, technique_tags, difficulty):
+    # Fetch more than needed to account for post-filtering, then slice
+    fetch_limit = limit * 10 if (topic_tags or technique_tags or difficulty) else limit
     result = await db.execute(
-        select(Question).order_by(desc(Question.trending_score)).offset(skip).limit(limit)
+        select(Question).order_by(desc(order_col)).limit(fetch_limit)
     )
     questions = result.scalars().all()
+
+    if topic_tags:
+        questions = [q for q in questions if q.topic_tags and any(t in q.topic_tags for t in topic_tags)]
+    if technique_tags:
+        questions = [q for q in questions if q.technique_tags and any(t in q.technique_tags for t in technique_tags)]
+    if difficulty:
+        questions = [q for q in questions if q.difficulty == difficulty]
+
+    return questions[skip: skip + limit]
+
+
+@router.get("/trending", response_model=List[QuestionResponse])
+async def get_trending_feed(
+    skip: int = 0,
+    limit: int = 20,
+    topic_tags: Optional[List[str]] = Query(default=None),
+    technique_tags: Optional[List[str]] = Query(default=None),
+    difficulty: Optional[str] = None,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_optional_current_user)
+):
+    questions = await _fetch_filtered(db, Question.trending_score, skip, limit, topic_tags, technique_tags, difficulty)
     return await _enrich_questions(questions, db, current_user)
 
+
 @router.get("/best", response_model=List[QuestionResponse])
-async def get_best_feed(skip: int = 0, limit: int = 20, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_optional_current_user)):
-    result = await db.execute(
-        select(Question).order_by(desc(Question.wilson_score)).offset(skip).limit(limit)
-    )
-    questions = result.scalars().all()
+async def get_best_feed(
+    skip: int = 0,
+    limit: int = 20,
+    topic_tags: Optional[List[str]] = Query(default=None),
+    technique_tags: Optional[List[str]] = Query(default=None),
+    difficulty: Optional[str] = None,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_optional_current_user)
+):
+    questions = await _fetch_filtered(db, Question.wilson_score, skip, limit, topic_tags, technique_tags, difficulty)
     return await _enrich_questions(questions, db, current_user)

@@ -222,6 +222,33 @@ async def add_question_to_list(
     return {"message": "Question added to list"}
 
 
+@router.patch("/{list_id}/questions/{question_id}/status")
+async def update_question_status(
+    list_id: UUID,
+    question_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    result = await db.execute(select(List).filter(List.id == list_id))
+    lst = result.scalars().first()
+    if not lst or lst.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not your list")
+
+    lq_result = await db.execute(
+        select(ListQuestion).filter(
+            ListQuestion.list_id == list_id,
+            ListQuestion.question_id == question_id
+        )
+    )
+    lq = lq_result.scalars().first()
+    if not lq:
+        raise HTTPException(status_code=404, detail="Question not in list")
+
+    lq.status = ListQuestionStatus.TODO if lq.status == ListQuestionStatus.SOLVED else ListQuestionStatus.SOLVED
+    await db.commit()
+    return {"status": lq.status.value}
+
+
 @router.delete("/{list_id}/questions/{question_id}", status_code=status.HTTP_200_OK)
 async def remove_question_from_list(
     list_id: UUID,
