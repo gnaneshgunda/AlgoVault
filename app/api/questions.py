@@ -197,11 +197,18 @@ async def list_questions(
     )
     questions = result.scalars().all()
 
+    if not questions:
+        return []
+
+    # Batch username lookup
+    submitter_ids = list({q.submitter_id for q in questions})
+    username_result = await db.execute(
+        select(User.id, User.username).filter(User.id.in_(submitter_ids))
+    )
+    username_map = {row.id: row.username for row in username_result}
+
     responses = []
     for q in questions:
-        # Get submitter username
-        user_result = await db.execute(select(User.username).filter(User.id == q.submitter_id))
-        username = user_result.scalar_one_or_none() or "Unknown"
         responses.append(QuestionResponse(
             id=q.id,
             submitter_id=q.submitter_id,
@@ -214,6 +221,6 @@ async def list_questions(
             trending_score=q.trending_score,
             wilson_score=q.wilson_score,
             created_at=q.created_at,
-            submitter_username=username,
+            submitter_username=username_map.get(q.submitter_id) or "Unknown",
         ))
     return responses

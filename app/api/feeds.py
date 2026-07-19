@@ -10,11 +10,22 @@ from app.api.auth import get_optional_current_user
 router = APIRouter(prefix="/feed", tags=["feeds"])
 
 async def _enrich_questions(questions, db, current_user=None):
+    if not questions:
+        return []
+
     responses = []
     user_interactions_map = {}
     solved_set = set()
+    question_ids = [q.id for q in questions]
+
+    # --- Batch username lookup (1 query instead of N) ---
+    submitter_ids = list({q.submitter_id for q in questions})
+    username_result = await db.execute(
+        select(User.id, User.username).filter(User.id.in_(submitter_ids))
+    )
+    username_map = {row.id: row.username for row in username_result}
+
     if current_user:
-        question_ids = [q.id for q in questions]
         interactions_result = await db.execute(
             select(Interaction).filter(
                 Interaction.user_id == current_user.id,
@@ -35,8 +46,7 @@ async def _enrich_questions(questions, db, current_user=None):
         solved_set = {row for row, in solved_result.all()}
 
     for q in questions:
-        user_result = await db.execute(select(User.username).filter(User.id == q.submitter_id))
-        username = user_result.scalar_one_or_none() or "Unknown"
+        username = username_map.get(q.submitter_id) or "Unknown"
         has_upvoted = False
         has_saved = False
         if current_user and q.id in user_interactions_map:

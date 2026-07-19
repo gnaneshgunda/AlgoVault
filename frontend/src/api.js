@@ -4,6 +4,19 @@ const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://127.0.0.1:800
 
 const api = axios.create({
   baseURL: API_BASE_URL,
+  // FastAPI expects repeated params for arrays: ?tag=A&tag=B
+  // Axios default serializes as: ?tag[]=A&tag[]=B — which FastAPI ignores.
+  paramsSerializer: (params) => {
+    const searchParams = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (Array.isArray(value)) {
+        value.forEach(v => searchParams.append(key, v));
+      } else if (value !== undefined && value !== null && value !== '') {
+        searchParams.append(key, String(value));
+      }
+    });
+    return searchParams.toString();
+  },
 });
 
 // Attach auth token to every request
